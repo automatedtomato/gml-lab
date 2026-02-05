@@ -1,0 +1,29 @@
+name: Weekly Heavy Tests
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+    workflow_dispatch:
+
+jobs:
+  heavy-tests:
+    name: Full Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        uses: |
+          uv venv
+          uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          uv pip install -r requirements.txt
+          uv pip install --no-deps -e
+
+      - name: Run All tests
+        run: uv run pytest
