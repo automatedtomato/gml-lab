@@ -1,0 +1,25 @@
+services:
+  gml-lab:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ../:/gml-lab
+      - root-home:/root
+
+    privileged: true
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    shm_size: "8gb"
+    command: sleep infinity
+    network_mode: host
+
+volumes:
+  root-home:

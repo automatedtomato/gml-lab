@@ -1,0 +1,39 @@
+{
+    "name": "GML-Lab Dev",
+    "service": "gml-lab",
+    "dockerComposeFile": "docker-compose.yaml",
+    "workspaceFolder": "/gml-lab",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "editor.bracketPairColorization.enabled": true,
+                "editor.guides.bracketPairs": "active"
+            },
+            "extensions": [
+                // common
+                "shardulm94.trailing-spaces",
+                "oderwat.indent-rainbow",
+                "streetsidesoftware.code-spell-checker",
+                // Python
+                "ms-python.python",
+                "ms-python.mypy-type-checker",
+                "charliermarsh.ruff",
+                "ms-toolsai.jupyter",
+                // C/C++
+                "ms-vscode.cpptools",
+                // toml
+                "tamasfe.even-better-toml",
+                // markdown
+                "yzhang.markdown-all-in-one",
+                "yzane.markdown-pdf",
+                "shd101wyy.markdown-preview-enhanced",
+                "davidanson.vscode-markdownlint",
+                // Other
+                "mechatroner.rainbow-csv"
+            ]
+        }
+    },
+    "postCreateCommand": [
+        "pip install --no-deps -e ."
+    ]
+}
