@@ -7,7 +7,7 @@ requires-python = ">=3.10"
 
 # Build Config
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=64.0", "wheel", "torch==2.2.1+cu118"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
@@ -46,7 +46,16 @@ ignore = [
     "TRY400",
     "RUF003"
 ]
-
+[tool.ruff.lint.isort]
+sections = { "custom-kernels" = ["gml_lab_custom_ops"] }
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+    "custom-kernels"
+]
 [tool.ruff.lint.pylint]
 max-args = 8
 
