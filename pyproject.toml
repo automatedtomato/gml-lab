@@ -7,7 +7,7 @@ requires-python = ">=3.10"
 
 # Build Config
 [build-system]
-requires = ["setuptools>=64.0", "wheel", "torch==2.2.1+cu118"]
+requires = ["setuptools>=64.0", "wheel", "torch"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
