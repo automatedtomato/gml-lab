@@ -1,0 +1,2 @@
+# The Green-ML Optimization Lab (GML-Lab) 
+This project is established to develop a vertical optimization pipeline for the entire spectrum of Computer Vision models provided by `mmpretrain`. The project aims to bridge the gap between high-level model abstractions (PyTorch/FX) and low-level hardware implementations (CUDA), specifically targeting the NVIDIA RTX 3060 Ti architecture.
