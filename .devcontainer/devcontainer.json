@@ -34,6 +34,6 @@
         }
     },
     "postCreateCommand": [
-        "pip install --no-deps -e . && git config --global --add safe.directory /gml-lab"
+        "git config --global --add safe.directory /gml-lab && uv pip install -v --no-build-isolation -e . && source dev.sh"
     ]
 }

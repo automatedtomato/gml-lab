@@ -7,7 +7,7 @@ requires-python = ">=3.10"
 
 # Build Config
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=64.0", "wheel", "torch"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
@@ -46,7 +46,16 @@ ignore = [
     "TRY400",
     "RUF003"
 ]
-
+[tool.ruff.lint.isort]
+sections = { "custom-kernels" = ["gml_lab_custom_ops"] }
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+    "custom-kernels"
+]
 [tool.ruff.lint.pylint]
 max-args = 8
 
@@ -59,5 +68,7 @@ max-args = 8
 
 [tool.pytest.ini_options]
 markers = [
-    "gpu: marks tests as requiring a GPU (deselect with '-m \"not gpu\"')",
+    "gpu: Tests that require a real GPU (skipped on CI)",
+    "heavy: Tests that take a long time (skipped on PRs)",
 ]
+testpaths = ["tests"]
