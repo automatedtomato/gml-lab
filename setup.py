@@ -1,8 +1,8 @@
+import warnings
 from pathlib import Path
 
 import setuptools
 from torch.utils import cpp_extension
-import warnings
 
 CUDA_AVAILABLE = cpp_extension.CUDA_HOME is not None
 ext_modules = []
@@ -14,7 +14,7 @@ if CUDA_AVAILABLE:
     nvcc_args = ["-O3"]
     cxx_args = ["-O3"]
 
-    ext_modules=[
+    ext_modules = [
         cpp_extension.CUDAExtension(
             "gml_lab_custom_ops",
             sources=sources,
@@ -25,7 +25,7 @@ if CUDA_AVAILABLE:
         )
     ]
 
-    cmdclass={"build_ext": cpp_extension.BuildExtension}
+    cmdclass = {"build_ext": cpp_extension.BuildExtension}
 else:
     warnings.warn(
         "CUDA not available. Skipping custom CUDA kernel build.", stacklevel=1
