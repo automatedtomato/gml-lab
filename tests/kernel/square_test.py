@@ -8,7 +8,10 @@ import torch
 
 from tests.utils.test_utils import NO_GPU
 
-import gml_lab_custom_ops as custom_ops
+try:
+    import gml_lab_custom_ops as custom_ops
+except ImportError:
+    custom_ops = None
 
 seeds = [int(os.getenv("SEED", time.time_ns()))]
 
