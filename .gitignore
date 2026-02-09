@@ -1,6 +1,14 @@
 # Internal documenations
 internal/
 
+# Configs
+configs/*.yaml
+configs/*.yml
+
+
+# Experiment notebooks
+experiments/
+
 
 # Custom bash
 dev.sh
@@ -12,6 +20,7 @@ work_dirs/
 *.pth
 *.pt
 *.safetensors
+.torch/*
 
 
 # Outputs

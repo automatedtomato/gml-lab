@@ -3,9 +3,13 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+
+    environment:
+      - TORCH_HOME=/gml-lab/.torch
     volumes:
       - ../:/gml-lab
       - root-home:/root
+      - ../.torch:/gml-lab/.torch
 
     privileged: true
 
