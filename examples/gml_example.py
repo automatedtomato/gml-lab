@@ -15,6 +15,7 @@ def parse_args() -> argparse.Namespace:
         "-a",
         "--arch",
         type=str,
+        default="resnet50_8xb32-fp16_in1k",
         help=(
             "Specify the model name compatible with `mim download`. "
             "To see available models, run `mim searh mmdet`."
