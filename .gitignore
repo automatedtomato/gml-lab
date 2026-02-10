@@ -28,6 +28,11 @@ tests/results/*
 examples/results/*
 
 
+# Datasets and Experiments
+data/*
+experiments/*
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
