@@ -83,5 +83,6 @@ def main() -> None:
 
     print(f"Saved to {args.out_path}")
 
+
 if __name__ == "__main__":
     main()
