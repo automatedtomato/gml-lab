@@ -15,7 +15,6 @@ dev.sh
 
 
 # OpenMMLab
-data/
 work_dirs/
 *.pth
 *.pt
@@ -26,6 +25,11 @@ work_dirs/
 # Outputs
 tests/results/*
 examples/results/*
+
+
+# Datasets and Experiments
+data/*
+experiments/*
 
 
 # Byte-compiled / optimized / DLL files
