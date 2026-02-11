@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import argparse
 
-import torch
-
 from examples.utils import set_seed
-from src.gml_lab.model_loader import load_model
+from src.gml_lab.config_builder import build_config
+from src.gml_lab.evaluation import evaluate
 
 
 def parse_args() -> argparse.Namespace:
@@ -15,11 +14,25 @@ def parse_args() -> argparse.Namespace:
         "-a",
         "--arch",
         type=str,
-        default="resnet50_8xb32-fp16_in1k",
+        default="resnet18_8xb32_in1k",
         help=(
             "Specify the model name compatible with `mim download`. "
             "To see available models, run `mim searh mmdet`."
         ),
+    )
+    parser.add_argument(
+        "-d",
+        "--data",
+        type=str,
+        default="imagenet_lmdb",
+        help="Specify the dataset which is used in evalutaion.",
+    )
+    parser.add_argument(
+        "-b",
+        "--batch-size",
+        type=int,
+        default=32,
+        help="Specify batch size for evaluation. Default to 32."
     )
     return parser.parse_args()
 
@@ -29,12 +42,8 @@ def main() -> None:
     set_seed()
     args = parse_args()
 
-    model = load_model(args.arch)
-    print(model)
-
-    test_input = torch.randn((1, 3, 224, 224))
-    out = model(test_input)
-    print(out.shape)
+    cfg = build_config(args.arch, args.data, args.batch_size)
+    evaluate(cfg)
 
 
 if __name__ == "__main__":

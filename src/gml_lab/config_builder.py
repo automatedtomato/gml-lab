@@ -7,7 +7,11 @@ from .logger import get_logger
 logger = get_logger("config_builder")
 
 
-def build_config(model_arch: str, data_setting: str) -> mmengine.config.Config:
+def build_config(
+    model_arch: str,
+    data_setting: str,
+    batch_size: int = 32
+) -> mmengine.config.Config:
     """Merge given model and data config, return mmengine.config.Config."""
     if model_arch not in MODEL_ZOO:
         msg = f"Model `{model_arch}` not found in model zoo "
@@ -22,6 +26,10 @@ def build_config(model_arch: str, data_setting: str) -> mmengine.config.Config:
     logger.info(f"[data] name={data_setting}, config_file={DATA_CONFIGS[data_setting]}")
 
     model_cfg.merge_from_dict(data_cfg.to_dict())
+
+    model_cfg.work_dir = f"work_dirs/{model_arch}"
+    model_cfg.val_dataloader.batch_size = batch_size
+    model_cfg.test_dataloader.batch_size = batch_size
 
     return model_cfg
 

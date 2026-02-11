@@ -67,12 +67,12 @@ def main() -> None:
         with open(path, "rb") as f:
             img_bytes = f.read()
         key = f"{idx:08}"
-        value = {
+        data_sample = {
             "img_bytes": img_bytes,
-            "label": label,
+            "gt_label": label,
             "filename": Path(path).name,
         }
-        txn.put(key.encode("ascii"), pickle.dumps(value))
+        txn.put(key.encode("ascii"), pickle.dumps(data_sample))
         if idx % args.write_freq == 0:
             txn.commit()
             txn = env.begin(write=True)

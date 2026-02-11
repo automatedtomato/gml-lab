@@ -1,0 +1,21 @@
+{
+    "version": "0.1.0",
+    "configurations": [
+        {
+            "name": "gml_example.py debug",
+            "type": "python",
+            "python": "/usr/bin/python3",
+            "request": "launch",
+            "module": "examples.gml_example",
+            "cwd": "/gml-lab",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--arch",
+                "resnet18_8xb32_in1k",
+                "--data",
+                "imagenet_lmdb",
+            ]
+        }
+    ]
+}

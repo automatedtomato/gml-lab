@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 @TRANSFORMS.register_module()
-class LoadImageFromLMSB(BaseTransform):
+class LoadImageFromLMDB(BaseTransform):
     """Decode image from bytes loaded from LMDB.
 
     This transform replaces the standard `LoadImageFromFile`.
@@ -89,8 +89,12 @@ class ImageNetLMDB(BaseDataset):
 
     """
 
-    def __init__(self, lmdb_path: Path, **kwargs: dict[str, Any]) -> None:
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        lmdb_path: Path,
+        split: str | None = None,  # noqa: ARG002
+        **kwargs: dict[str, Any],
+    ) -> None:
         self.lmdb_path = lmdb_path
         # NOTE [Lazy Initialization of LMDB Environment]:
         # We explicitly set self.env to None here and initialize it lazily inside
@@ -103,6 +107,9 @@ class ImageNetLMDB(BaseDataset):
         # By initializing inside `get_data_info`, we ensure that each worker process
         # creates its own independent connection to the LMDB file.
         self.env: lmdb.Environment | None = None
+        if "serialize_data" not in kwargs:
+            kwargs["serialize_data"] = False
+        super().__init__(**kwargs)
 
     def load_data_list(self) -> list[dict]:
         """Load annotations (indices) from LMDB.
@@ -157,7 +164,6 @@ class ImageNetLMDB(BaseDataset):
                 readahead=False,
                 meminit=False,
             )
-
         data_info = self.data_list[idx]
         sample_idx = data_info["sample_idx"]
 
