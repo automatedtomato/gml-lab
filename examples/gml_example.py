@@ -31,8 +31,8 @@ def parse_args() -> argparse.Namespace:
         "-b",
         "--batch-size",
         type=int,
-        default=32,
-        help="Specify batch size for evaluation. Default to 32."
+        default=64,
+        help="Specify batch size for evaluation. Default to 64.",
     )
     return parser.parse_args()
 
