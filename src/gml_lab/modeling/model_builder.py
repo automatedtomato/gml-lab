@@ -3,14 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 import mmengine
-import mmpretrain
 import torch
 from mmpretrain.structures import DataSample
-
-
-def load_model(arch: str, pretrained: bool = True) -> Any:  # noqa: ANN401, FBT001, FBT002
-    """Load model with mmpretrain apis."""
-    return mmpretrain.get_model(arch, pretrained=pretrained)
 
 
 class FxWrapper(torch.nn.Module):
@@ -120,19 +114,22 @@ class MMLabWrapper(mmengine.model.BaseModel):
         return None
 
 
-if __name__ == "__main__":
-    model = load_model("resnet18_8xb32_in1k")
-    wrapped_model = FxWrapper(model)
-    try:
-        gm = torch.fx.symbolic_trace(wrapped_model)
-        gm.graph.print_tabular()
-    except Exception as e:
-        print(e)
+def build_mm_model(
+    gm: torch.fx.GraphModule | FxWrapper, cfg: mmengine.config.Config
+) -> MMLabWrapper:
+    """Build MMLabWrapper with clean config.
 
-    example_input = torch.randn((1, 3, 224, 224))
-    out_org = model(example_input)
-    out_gm = gm(example_input)
-    if torch.allclose(out_org, out_gm):
-        print("Model symbolically traced successfuly.")
-    else:
-        print("Outputs of GraphModule and float model are different.")
+    This function handles cleaning up the data_preprocessor
+    configuration (e.g., removing 'num_classes', fixing 'to_rgb').
+    """
+    data_preprocessor_cfg = cfg.get("data_preprocessor", {}).copy()
+
+    if "type" not in data_preprocessor_cfg:
+        data_preprocessor_cfg["type"] = "ImgDataPreprocessor"
+
+    data_preprocessor_cfg.pop("num_classes", None)
+
+    if "to_rgb" in data_preprocessor_cfg:
+        data_preprocessor_cfg["bgr_to_rgb"] = data_preprocessor_cfg.pop("to_rgb")
+
+    return MMLabWrapper(gm, data_preprocessor=data_preprocessor_cfg)
