@@ -15,7 +15,7 @@ DATA_CONFIGS = {
 
 
 def build_config(
-    model_arch: str, data_setting: str, batch_size: int = 32
+    model_arch: str, data_setting: str, batch_size: int = 64
 ) -> mmengine.config.Config:
     """Merge given model and data config, return mmengine.config.Config."""
     kwds = model_arch.replace("_", "-").split("-")[:3]

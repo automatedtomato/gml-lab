@@ -8,10 +8,11 @@ import torch
 import yaml
 
 
-def set_seed() -> None:
+def set_seed() -> int:
     """Set seed for torch."""
     seed = int(os.getenv("SET_SEED", time.time_ns()))
     torch.manual_seed(seed)
+    return seed
 
 
 def load_config(config_path: Path, top_key: str = "example_config") -> dict:
