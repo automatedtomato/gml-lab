@@ -32,6 +32,7 @@ ignore = [
     "ERA001",
     "G004",
     "NPY002",
+    "PERF402",
     "PTH103",
     "PTH110",
     "PTH120",
@@ -44,7 +45,8 @@ ignore = [
     "TD003",
     "TRY003",
     "TRY400",
-    "RUF003"
+    "RUF003",
+    "S301"
 ]
 [tool.ruff.lint.isort]
 sections = { "custom-kernels" = ["gml_lab_custom_ops"] }
@@ -65,6 +67,9 @@ max-args = 8
     "D103"
 ]
 "experiments/*" = ["ALL"]
+"configs/*" = [
+    "C408"
+]
 
 [tool.pytest.ini_options]
 markers = [

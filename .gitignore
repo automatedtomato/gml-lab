@@ -1,22 +1,35 @@
 # Internal documenations
 internal/
 
+# Configs
+configs/*.yaml
+configs/*.yml
+
+
+# Experiment notebooks
+experiments/
+
 
 # Custom bash
 dev.sh
 
 
 # OpenMMLab
-data/
 work_dirs/
 *.pth
 *.pt
 *.safetensors
+.torch/*
 
 
 # Outputs
 tests/results/*
 examples/results/*
+
+
+# Datasets and Experiments
+data/*
+experiments/*
 
 
 # Byte-compiled / optimized / DLL files
