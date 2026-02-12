@@ -70,6 +70,7 @@ max-args = 8
 "configs/*" = [
     "C408"
 ]
+"work_dirs/*" = ["ALL"]
 
 [tool.pytest.ini_options]
 markers = [

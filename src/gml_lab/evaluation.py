@@ -3,6 +3,8 @@ import time
 import mmengine
 from codecarbon import OfflineEmissionsTracker
 
+from .modeling import FxWrapper, build_mm_model, load_model
+
 
 def evaluate(
     cfg: mmengine.config.Config,
@@ -12,7 +14,20 @@ def evaluate(
     seed: int,
 ) -> dict[str, float]:
     """Get metrics from the target_model."""
-    runner = mmengine.runner.Runner.from_cfg(cfg)
+    model = load_model(model_arch, pretrained=True)
+
+    wrapped_model = FxWrapper(model)
+    mm_model = build_mm_model(wrapped_model, cfg)
+
+    runner = mmengine.runner.Runner(
+        model=mm_model,
+        work_dir=cfg.work_dir,
+        test_dataloader=cfg.test_dataloader,
+        test_evaluator=cfg.test_evaluator,
+        test_cfg=cfg.test_cfg,
+        default_scope=cfg.default_scope,
+        default_hooks=cfg.get("default_hooks", None),
+    )
 
     tracker = OfflineEmissionsTracker(
         project_name=f"GML-Lab-{target_type}",
