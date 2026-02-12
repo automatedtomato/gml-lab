@@ -39,11 +39,16 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     """Run main example path."""
-    set_seed()
+    seed = set_seed()
     args = parse_args()
 
-    cfg = build_config(args.arch, args.data, args.batch_size)
-    evaluate(cfg)
+    cfg = build_config(
+        model_arch=args.arch,
+        data_setting=args.data,
+        batch_size=args.batch_size,
+    )
+
+    _ = evaluate(cfg, model_arch=args.arch, target_type="float", seed=seed)
 
 
 if __name__ == "__main__":
