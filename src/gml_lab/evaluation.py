@@ -3,6 +3,8 @@ import time
 import mmengine
 from codecarbon import OfflineEmissionsTracker
 
+from .model_builder import FxWrapper, MMLabWrapper, load_model
+
 
 def evaluate(
     cfg: mmengine.config.Config,
@@ -12,7 +14,28 @@ def evaluate(
     seed: int,
 ) -> dict[str, float]:
     """Get metrics from the target_model."""
-    runner = mmengine.runner.Runner.from_cfg(cfg)
+    model = load_model(model_arch, pretrained=True)
+    data_preprocessor_cfg = cfg.get("data_preprocessor", {}).copy()
+    if "type" not in data_preprocessor_cfg:
+        data_preprocessor_cfg["type"] = "ImgDataPreprocessor"
+    data_preprocessor_cfg.pop("num_classes", None)
+    if "to_rgb" in data_preprocessor_cfg:
+    # 値を取り出しつつ削除し、新しいキーで入れ直す
+        is_to_rgb = data_preprocessor_cfg.pop("to_rgb")
+        data_preprocessor_cfg["bgr_to_rgb"] = is_to_rgb
+
+    wrapped_model = FxWrapper(model)
+    mm_model = MMLabWrapper(wrapped_model, data_preprocessor=data_preprocessor_cfg)
+
+    runner = mmengine.runner.Runner(
+        model=mm_model,
+        work_dir=cfg.work_dir,
+        test_dataloader=cfg.test_dataloader,
+        test_evaluator=cfg.test_evaluator,
+        test_cfg=cfg.test_cfg,
+        default_scope=cfg.default_scope,
+        default_hooks=cfg.get("default_hooks", None),
+    )
 
     tracker = OfflineEmissionsTracker(
         project_name=f"GML-Lab-{target_type}",
