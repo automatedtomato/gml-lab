@@ -22,7 +22,7 @@ jobs:
           uv venv --allow-existing
           uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           uv pip install openmim
-          uv run mim install "mmcv=2.1.0"
+          uv run mim install "mmcv==2.1.0"
           uv pip install -r docker/install/requirements.txt
           uv pip install --no-deps -e .
 
