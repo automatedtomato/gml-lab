@@ -1,28 +1,28 @@
 import time
 
 import mmengine
+import torch
 from codecarbon import OfflineEmissionsTracker
+from torch.utils.data import DataLoader
 
-from .modeling import FxWrapper, build_mm_model, load_model
+from .modeling import build_mm_model
 
 
 def evaluate(
     cfg: mmengine.config.Config,
-    *,
     model_arch: str,
+    target_model: torch.nn.Module | torch.fx.GraphModule,
     target_type: str,
+    test_loader: DataLoader,
     seed: int,
 ) -> dict[str, float]:
     """Get metrics from the target_model."""
-    model = load_model(model_arch, pretrained=True)
-
-    wrapped_model = FxWrapper(model)
-    mm_model = build_mm_model(wrapped_model, cfg)
+    mm_model = build_mm_model(target_model, cfg)
 
     runner = mmengine.runner.Runner(
         model=mm_model,
         work_dir=cfg.work_dir,
-        test_dataloader=cfg.test_dataloader,
+        test_dataloader=test_loader,
         test_evaluator=cfg.test_evaluator,
         test_cfg=cfg.test_cfg,
         default_scope=cfg.default_scope,
@@ -52,8 +52,9 @@ def evaluate(
     avg_power = total_power / (dur / 3600)
 
     print(
-        f"[Result] {metrics}, {dur:.2f} sec, emissions={carbon_em:4f} g, "
-        f"total_power={total_power:4f} Wh, avg_power={avg_power:2f} W"
+        f"[Result] {target_type}_model: {metrics}, {dur:.2f} sec, "
+        f"emissions={carbon_em:4f} g, total_power={total_power:4f} Wh, "
+        f"avg_power={avg_power:2f} W"
     )
     metrics.update(
         {

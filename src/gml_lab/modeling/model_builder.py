@@ -71,7 +71,7 @@ class MMLabWrapper(mmengine.model.BaseModel):
 
     def __init__(
         self,
-        graph_module: torch.fx.GraphModule | FxWrapper,
+        graph_module: torch.fx.GraphModule | torch.nn.Module,
         data_preprocessor: dict[str, Any] | None,
     ) -> None:
         super().__init__(data_preprocessor=data_preprocessor)
@@ -115,7 +115,7 @@ class MMLabWrapper(mmengine.model.BaseModel):
 
 
 def build_mm_model(
-    gm: torch.fx.GraphModule | FxWrapper, cfg: mmengine.config.Config
+    gm: torch.fx.GraphModule | torch.nn.Module, cfg: mmengine.config.Config
 ) -> MMLabWrapper:
     """Build MMLabWrapper with clean config.
 

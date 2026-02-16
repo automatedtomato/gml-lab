@@ -1,0 +1,42 @@
+from __future__ import annotations
+
+import copy
+from typing import TYPE_CHECKING, Any
+
+from torch.ao.quantization.quantize_fx import prepare_fx
+
+if TYPE_CHECKING:
+    import torch
+    from torch.ao.quantization.backend_config import BackendConfig
+    from torch.ao.quantization.qconfig_mapping import QConfigMapping
+    from torch.fx import GraphModule
+
+
+def gml_prepare_fx(
+    model: torch.nn.Module,
+    example_inputs: tuple[Any, ...],
+    qconfig_mapping: QConfigMapping | dict[str, Any],
+    backend_config: BackendConfig | dict[str, Any] | None = None,
+) -> GraphModule:
+    """Prepare a model for PTQ.
+
+    See `torch.ao.quantization.prepare_fx` for reference.
+
+    Args:
+        model (torch.nn.Module): float model to be quantized
+        example_inputs (tule[Any, ...]): tuple of input tensor
+        qconfig_mapping (QConfigMapping): quantization configuration
+        backend_config (QConfigMapping): backend configuration
+
+    Returns:
+        torch.fx.GraphModule: the prepared model with fake quant.
+
+    """
+    model = copy.deepcopy(model)
+
+    return prepare_fx(
+        model=model,
+        qconfig_mapping=qconfig_mapping,
+        backend_config=backend_config,
+        example_inputs=example_inputs,
+    )
