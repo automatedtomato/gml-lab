@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import torch
 
+from src.gml_lab.modeling import FxWrapper
 from src.gml_lab.quantizer import (
     calibrate_model,
     gml_convert_fx,
@@ -28,11 +29,14 @@ def quantize(
     qconfig_mapping: QConfigMapping | dict[str, Any],
     calib_loader: Any,  # noqa: ANN401
     total_calib_batches: int,
+    data_preprocessor: torch.nn.Module,
 ) -> tuple[torch.fx.GraphModule, ...]:
     """Quantize model."""
-    prepared_model = gml_prepare_fx(model, example_inputs, qconfig_mapping)
+    float_model = FxWrapper(model)
+    prepared_model = gml_prepare_fx(float_model, example_inputs, qconfig_mapping)
     prepared_model = calibrate_model(
         prepared_model,
+        data_preprocessor=data_preprocessor,
         calib_loader=calib_loader,
         total_calib_batches=total_calib_batches,
     )
