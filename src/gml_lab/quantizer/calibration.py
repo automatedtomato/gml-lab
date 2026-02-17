@@ -31,7 +31,7 @@ def calibrate_model(
     data_preprocessor = data_preprocessor.to(device)
     data_preprocessor.eval()
 
-    pbar = tqdm(calib_loader, desc="calibrate mdoel", total=total_calib_batches)
+    pbar = tqdm(calib_loader, desc="calibrate model", total=total_calib_batches)
     with torch.no_grad():
         for i, batch in enumerate(pbar):
             if i >= total_calib_batches:

@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import argparse
 import math
+from pathlib import Path
 
 import torch
-
-from pathlib import Path
 
 from examples.utils import prepare_dataloader, quantize, set_seed
 from src.gml_lab.config_builder import build_mm_config
 from src.gml_lab.evaluation import evaluate
 from src.gml_lab.modeling import load_model
 from src.gml_lab.quantizer import build_qconfig_mapping
+from tools.layer_by_layer_analysis import run_sensitivity_analysis
 from tools.visualize_graph import dump_graph
 
 
@@ -22,9 +22,7 @@ def parse_args() -> argparse.Namespace:
         "eval_options",
         nargs="*",
         type=str,
-        help=(
-            "Select evaluation options from ['float', 'qdq', 'custom_ops']."
-        )
+        help=("Select evaluation options from ['float', 'qdq', 'custom_ops']."),
     )
     parser.add_argument(
         "-a",
@@ -65,7 +63,14 @@ def parse_args() -> argparse.Namespace:
             "Directory where visualized graph are saved in dot format. "
             "If specified, FxGraphDrawer visualize graphs, "
             "which requires graphviz and pydot as dependecies."
-        )
+        ),
+    )
+    parser.add_argument(
+        "--lbl-dump-dir",
+        type=Path,
+        help=(
+            "Directory where layer-by-layer sensitivity analysis reports are saved. "
+        ),
     )
     return parser.parse_args()
 
@@ -109,6 +114,15 @@ def main() -> None:
     if args.graph_dump_dir is not None:
         dump_graph(prepared_model, args.arch + "_prepared", args.graph_dump_dir)
         dump_graph(qdq_model, args.arch + "_qdq", args.graph_dump_dir)
+
+    if args.lbl_dump_dir is not None:
+        prepared_model.to("cpu")
+        qdq_model.to("cpu")
+        analysis_input = example_input[:1].to("cpu")
+        results = run_sensitivity_analysis(prepared_model, qdq_model, analysis_input)
+        print(results)
+        prepared_model.to(device)
+        qdq_model.to(device)
 
     for option in args.eval_options:
         _ = evaluate(cfg, args.arch, float_model, option, test_loader, seed)
