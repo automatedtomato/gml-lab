@@ -5,16 +5,27 @@ import math
 
 import torch
 
+from pathlib import Path
+
 from examples.utils import prepare_dataloader, quantize, set_seed
-from src.gml_lab.config_builder import build_config
+from src.gml_lab.config_builder import build_mm_config
 from src.gml_lab.evaluation import evaluate
 from src.gml_lab.modeling import load_model
 from src.gml_lab.quantizer import build_qconfig_mapping
+from tools.visualize_graph import dump_graph
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="OpenMMLab examples.")
+    parser.add_argument(
+        "eval_options",
+        nargs="*",
+        type=str,
+        help=(
+            "Select evaluation options from ['float', 'qdq', 'custom_ops']."
+        )
+    )
     parser.add_argument(
         "-a",
         "--arch",
@@ -48,10 +59,13 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--float-eval", action="store_true", help="If specified, evaluate float model."
-    )
-    parser.add_argument(
-        "--qdq-eval", action="store_true", help="If specified, evaluate QDQ model."
+        "--graph-dump-dir",
+        type=Path,
+        help=(
+            "Directory where visualized graph are saved in dot format. "
+            "If specified, FxGraphDrawer visualize graphs, "
+            "which requires graphviz and pydot as dependecies."
+        )
     )
     return parser.parse_args()
 
@@ -62,7 +76,7 @@ def main() -> None:
     args = parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    cfg = build_config(
+    cfg = build_mm_config(
         model_arch=args.arch,
         data_setting=args.data,
         batch_size=args.batch_size,
@@ -83,7 +97,7 @@ def main() -> None:
     calib_images = args.batch_size if args.calib_images is None else args.calib_images
     total_calib_batches = math.ceil(calib_images / args.batch_size)
 
-    _, qdq_model = quantize(
+    prepared_model, qdq_model = quantize(
         float_model,
         example_inputs,
         qconfig_mapping,
@@ -92,11 +106,12 @@ def main() -> None:
         data_preprocessor,
     )
 
-    if args.float_eval:
-        _ = evaluate(cfg, args.arch, float_model, "float", test_loader, seed)
+    if args.graph_dump_dir is not None:
+        dump_graph(prepared_model, args.arch + "_prepared", args.graph_dump_dir)
+        dump_graph(qdq_model, args.arch + "_qdq", args.graph_dump_dir)
 
-    if args.qdq_eval or args.quant_eval:
-        _ = evaluate(cfg, args.arch, qdq_model, "qdq", test_loader, seed)
+    for option in args.eval_options:
+        _ = evaluate(cfg, args.arch, float_model, option, test_loader, seed)
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ ENV PYTHONBUFFERED=1
 ENV UV_SYSTEM_PYTHON=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl wget vim \
+    git curl wget vim graphviz \
     bash-completion build-essential \
     python3-pip python3.10-dev python3.10-distutils \
     libgl1 libsm6 libxext6 libglib2.0-0 libxrender1 \

@@ -14,7 +14,7 @@ DATA_CONFIGS = {
 }
 
 
-def build_config(
+def build_mm_config(
     model_arch: str, data_setting: str, batch_size: int = 64
 ) -> mmengine.config.Config:
     """Merge given model and data config, return mmengine.config.Config."""
@@ -55,13 +55,3 @@ def build_config(
     cfg.test_dataloader.batch_size = batch_size
 
     return cfg
-
-
-if __name__ == "__main__":
-    # Fucntional test
-    try:
-        cfg = build_config("resnet18_8xb32_in1k", "imagenet_lmdb")
-        print(f"Model Type: {cfg.model.type}")  # exp: ImageClassifier
-        print(f"Dataset Type: {cfg.val_dataloader.dataset.type}")  # exp: ImageNetLMDB
-    except Exception as e:
-        print(f"Error: {e}")
