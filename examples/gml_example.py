@@ -11,7 +11,7 @@ from src.gml_lab.config_builder import build_mm_config
 from src.gml_lab.evaluation import evaluate
 from src.gml_lab.modeling import load_model
 from src.gml_lab.quantizer import build_qconfig_mapping
-from tools.layer_by_layer_analysis import run_sensitivity_analysis
+from tools.layer_by_layer_analysis import generate_analysis_report
 from tools.visualize_graph import dump_graph
 
 
@@ -116,16 +116,19 @@ def main() -> None:
         dump_graph(qdq_model, args.arch + "_qdq", args.graph_dump_dir)
 
     if args.lbl_dump_dir is not None:
-        prepared_model.to("cpu")
-        qdq_model.to("cpu")
+        prepared_model.eval().to("cpu")
+        qdq_model.eval().to("cpu")
         analysis_input = example_input[:1].to("cpu")
-        results = run_sensitivity_analysis(prepared_model, qdq_model, analysis_input)
-        print(results)
+        generate_analysis_report(
+            prepared_model, qdq_model, analysis_input, args.lbl_dump_dir
+        )
         prepared_model.to(device)
         qdq_model.to(device)
 
-    for option in args.eval_options:
-        _ = evaluate(cfg, args.arch, float_model, option, test_loader, seed)
+    if "float" in args.eval_options:
+        _ = evaluate(cfg, args.arch, float_model, "float", test_loader, seed)
+    if "qdq" in args.eval_options:
+        _ = evaluate(cfg, args.arch, qdq_model, "qdq", test_loader, seed)
 
 
 if __name__ == "__main__":

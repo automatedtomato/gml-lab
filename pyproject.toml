@@ -32,6 +32,7 @@ ignore = [
     "ERA001",
     "G004",
     "NPY002",
+    "PERF203",
     "PERF402",
     "PTH103",
     "PTH110",
