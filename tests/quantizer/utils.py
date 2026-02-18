@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import io
-from typing import TYPE_CHECKING, Any
 
 import torch
+from torch.utils.data import DataLoader, TensorDataset
 
-from src.gml_lab.modeling import FxWrapper
 from src.gml_lab.quantizer import (
-    calibrate_model,
+    build_qconfig_mapping,
     gml_convert_fx,
     gml_prepare_fx,
 )
 
-if TYPE_CHECKING:
-    from torch.ao.quantization.qconfig_mapping import QConfigMapping
+int8_max = torch.iinfo(torch.int8).max
+int8_min = torch.iinfo(torch.int8).min
 
 
 def get_model_size(model: torch.fx.GraphModule | torch.nn.Module) -> float:
@@ -23,23 +22,36 @@ def get_model_size(model: torch.fx.GraphModule | torch.nn.Module) -> float:
     return buffer.getbuffer().nbytes / (1024 * 1024)
 
 
-def quantize(
-    model: torch.nn.Module,
-    example_inputs: tuple[Any, ...],
-    qconfig_mapping: QConfigMapping | dict[str, Any],
-    calib_loader: Any,  # noqa: ANN401
-    total_calib_batches: int,
-    data_preprocessor: torch.nn.Module,
+def get_test_dataloader(
+    input_shape: tuple[int, ...], num_samples: int = 320, batch_size: int = 64
+) -> DataLoader:
+    dummy_input = torch.randn(num_samples, *input_shape)
+    dummy_target = torch.randint(int8_min, int8_max, (num_samples,))
+    dataset = TensorDataset(dummy_input, dummy_target)
+    return DataLoader(dataset, batch_size=batch_size)
+
+
+def quantize_model(
+    float_model: torch.nn.Module,
+    input_shape: tuple[int, ...] = (3, 28, 28),
+    device: str = "cpu",
 ) -> tuple[torch.fx.GraphModule, ...]:
     """Quantize model."""
-    float_model = FxWrapper(model)
-    prepared_model = gml_prepare_fx(float_model, example_inputs, qconfig_mapping)
-    prepared_model = calibrate_model(
-        prepared_model,
-        data_preprocessor=data_preprocessor,
-        calib_loader=calib_loader,
-        total_calib_batches=total_calib_batches,
+    float_model = float_model.to(device).eval()
+    dummy_inputs = (torch.randn(1, *input_shape),)
+    dummy_inputs_on_device = tuple(i.to(device) for i in dummy_inputs)
+    qconfig_mapping = build_qconfig_mapping()
+    calib_loader = get_test_dataloader(input_shape)
+
+    prepared_model = gml_prepare_fx(
+        float_model, dummy_inputs_on_device, qconfig_mapping
     )
-    qdq_model = gml_convert_fx(prepared_model, qconfig_mapping)
+
+    with torch.no_grad():
+        for batch in calib_loader:
+            inputs = batch[0].to(device)
+            _ = prepared_model(inputs)
+
+    qdq_model = gml_convert_fx(prepared_model)
 
     return prepared_model, qdq_model

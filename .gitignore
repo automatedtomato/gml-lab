@@ -25,6 +25,8 @@ work_dirs/
 # Outputs
 tests/results/*
 examples/results/*
+results/*
+tmp/*
 
 
 # Datasets and Experiments

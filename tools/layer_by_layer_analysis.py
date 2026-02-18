@@ -222,7 +222,7 @@ def run_sensitivity_analysis(
 
     results = []
 
-    for name in tqdm(target_nodes, desc="extract feat map"):
+    for name in tqdm(target_nodes, desc="Extracting feat map"):
         if name not in outputs_fp32 or name not in outputs_qdq:
             continue
 
@@ -268,7 +268,7 @@ def _plot_layer_scatter(
     min_val = min(x.min(), y.min())
     max_val = max(x.max(), y.max())
     margin = (max_val - min_val) * 0.05
-    plt.plot([min_val, max_val], [min_val, max_val], "r--", alpha=0.5, label="Ideal")
+    plt.plot([min_val, max_val], [min_val, max_val], "r--", alpha=0.5, label="ideal")
 
     plt.scatter(x, y, alpha=0.3, s=5, c="tab:blue")
 
@@ -296,7 +296,7 @@ def _plot_overview(results: list[CompareInfo], save_path: Path) -> None:
 
     # SNR
     color = "tab:blue"
-    ax1.set_xlabel("Layer")
+    ax1.set_xlabel("layers")
     ax1.set_ylabel("SNR (dB)", color=color)
     ax1.plot(
         df.index,
@@ -313,7 +313,7 @@ def _plot_overview(results: list[CompareInfo], save_path: Path) -> None:
     # CosSim
     ax2 = ax1.twinx()
     color = "tab:orange"
-    ax2.set_ylabel("Cosine Similarity", color=color)
+    ax2.set_ylabel("cos_sim", color=color)
     ax2.plot(
         df.index,
         df["cos_sim"],

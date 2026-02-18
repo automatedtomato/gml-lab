@@ -65,6 +65,7 @@ max-args = 8
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
     "D101",
+    "D102",
     "D103"
 ]
 "experiments/*" = ["ALL"]
