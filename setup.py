@@ -9,7 +9,8 @@ ext_modules = []
 cmdclass = {}
 
 if CUDA_AVAILABLE:
-    sources = [str(p) for p in Path("csrc").glob("*.cu") if p.is_file()]
+    source_files = list(Path("csrc").rglob("*.cu")) + list(Path("csrc").rglob("*.cpp"))
+    sources = [str(p) for p in source_files]
 
     nvcc_args = ["-O3"]
     cxx_args = ["-O3"]

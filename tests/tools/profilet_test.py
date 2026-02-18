@@ -4,7 +4,7 @@ import time
 import pytest
 import torch
 
-from tests.quantizer.utils import quantize_model
+from tests.utils.test_utils import quantize_model
 from tools.profiler import FxProfiler
 
 
