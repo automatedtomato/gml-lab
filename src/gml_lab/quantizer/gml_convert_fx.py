@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING, Any
 
 from torch.ao.quantization.quantize_fx import convert_fx, convert_to_reference_fx
@@ -36,6 +37,7 @@ def gml_convert_fx(
         torch.fx.GraphModule: the prepared model with fake quant.
 
     """
+    prepared_model = copy.deepcopy(prepared_model)
     if fake_quantize:
         logger.info("Process fake quantization.")
         return convert_to_reference_fx(

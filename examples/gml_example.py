@@ -2,19 +2,28 @@ from __future__ import annotations
 
 import argparse
 import math
+from pathlib import Path
 
 import torch
 
-from examples.utils import prepare_dataloader, quantize, set_seed
-from src.gml_lab.config_builder import build_config
+from examples.utils import perf_profile, prepare_dataloader, quantize, set_seed
+from src.gml_lab.config_builder import build_mm_config
 from src.gml_lab.evaluation import evaluate
 from src.gml_lab.modeling import load_model
 from src.gml_lab.quantizer import build_qconfig_mapping
+from tools.layer_by_layer_analysis import generate_analysis_report
+from tools.visualize_graph import dump_graph
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="OpenMMLab examples.")
+    parser.add_argument(
+        "eval_options",
+        nargs="*",
+        type=str,
+        help=("Select evaluation options from ['float', 'qdq', 'custom_ops']."),
+    )
     parser.add_argument(
         "-a",
         "--arch",
@@ -48,10 +57,28 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--float-eval", action="store_true", help="If specified, evaluate float model."
+        "--graph-dump-dir",
+        type=Path,
+        help=(
+            "Directory where visualized graph are saved in dot format. "
+            "If specified, FxGraphDrawer visualize graphs, "
+            "which requires graphviz and pydot as dependecies."
+        ),
     )
     parser.add_argument(
-        "--qdq-eval", action="store_true", help="If specified, evaluate QDQ model."
+        "--lbl-dump-dir",
+        type=Path,
+        help=(
+            "Directory where layer-by-layer sensitivity analysis reports are saved. "
+        ),
+    )
+    parser.add_argument(
+        "--enable-profile",
+        action="store_true",
+        help=(
+            "If specified, FxProfiler runs and gather profiling info. "
+            "Save results to `examples/results/arch-name/ ."
+        ),
     )
     return parser.parse_args()
 
@@ -62,7 +89,7 @@ def main() -> None:
     args = parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    cfg = build_config(
+    cfg = build_mm_config(
         model_arch=args.arch,
         data_setting=args.data,
         batch_size=args.batch_size,
@@ -83,7 +110,7 @@ def main() -> None:
     calib_images = args.batch_size if args.calib_images is None else args.calib_images
     total_calib_batches = math.ceil(calib_images / args.batch_size)
 
-    _, qdq_model = quantize(
+    prepared_model, qdq_model = quantize(
         float_model,
         example_inputs,
         qconfig_mapping,
@@ -92,10 +119,31 @@ def main() -> None:
         data_preprocessor,
     )
 
-    if args.float_eval:
-        _ = evaluate(cfg, args.arch, float_model, "float", test_loader, seed)
+    if args.graph_dump_dir is not None:
+        dump_graph(prepared_model, args.arch + "_prepared", args.graph_dump_dir)
+        dump_graph(qdq_model, args.arch + "_qdq", args.graph_dump_dir)
 
-    if args.qdq_eval or args.quant_eval:
+    if args.lbl_dump_dir is not None:
+        prepared_model.eval().to("cpu")
+        qdq_model.eval().to("cpu")
+        analysis_input = example_input[:1].to("cpu")
+        generate_analysis_report(
+            prepared_model, qdq_model, analysis_input, args.lbl_dump_dir
+        )
+        prepared_model.to(device)
+        qdq_model.to(device)
+
+    if args.enable_profile:
+        float_model.to(device)
+        qdq_model.to(device)
+        save_dir = Path(f"examples/results/{args.arch}")
+        save_dir.mkdir(parents=True, exist_ok=True)
+        perf_profile(float_model, example_inputs, save_dir / "float_prof.json")
+        perf_profile(qdq_model, example_inputs, save_dir / "qdq_prof.json")
+
+    if "float" in args.eval_options:
+        _ = evaluate(cfg, args.arch, float_model, "float", test_loader, seed)
+    if "qdq" in args.eval_options:
         _ = evaluate(cfg, args.arch, qdq_model, "qdq", test_loader, seed)
 
 
