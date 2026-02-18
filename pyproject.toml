@@ -32,6 +32,7 @@ ignore = [
     "ERA001",
     "G004",
     "NPY002",
+    "PERF203",
     "PERF402",
     "PTH103",
     "PTH110",
@@ -64,12 +65,14 @@ max-args = 8
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
     "D101",
+    "D102",
     "D103"
 ]
 "experiments/*" = ["ALL"]
 "configs/*" = [
     "C408"
 ]
+"work_dirs/*" = ["ALL"]
 
 [tool.pytest.ini_options]
 markers = [

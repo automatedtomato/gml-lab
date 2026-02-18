@@ -15,6 +15,7 @@
                 "resnet18_8xb32_in1k",
                 "--data",
                 "imagenet_lmdb",
+                "--lbl-dump-dir", "tmp",
             ]
         }
     ]

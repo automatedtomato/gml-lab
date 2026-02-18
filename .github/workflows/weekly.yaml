@@ -21,8 +21,11 @@ jobs:
       - name: Install dependencies
         uses: |
           uv venv --allow-existing
-          uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          uv pip install -r requirements.txt
+          uv pip install openmim
+          sed '/torch/d' docker/install/requirements.txt > requirements_ci.txt
+          uv pip install -r requirements_ci.txt
+          uv pip install torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cpu
+          uv run mim install "mmcv==2.1.0"
           uv pip install --no-deps -e
 
       - name: Run All tests
