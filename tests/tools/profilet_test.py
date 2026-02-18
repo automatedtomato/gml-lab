@@ -44,6 +44,5 @@ def test_profiler_simple_model(seed: int, model: torch.fx.GraphModule) -> None:
     results = profiler.results
 
     profiler.print_summary()
-    profiler.dump_to_json(f"results/{type(model).__name__}.json")
 
     assert len(results) > 0
