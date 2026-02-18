@@ -6,7 +6,7 @@ from pathlib import Path
 
 import torch
 
-from examples.utils import prepare_dataloader, quantize, set_seed
+from examples.utils import perf_profile, prepare_dataloader, quantize, set_seed
 from src.gml_lab.config_builder import build_mm_config
 from src.gml_lab.evaluation import evaluate
 from src.gml_lab.modeling import load_model
@@ -72,6 +72,14 @@ def parse_args() -> argparse.Namespace:
             "Directory where layer-by-layer sensitivity analysis reports are saved. "
         ),
     )
+    parser.add_argument(
+        "--enable-profile",
+        action="store_true",
+        help=(
+            "If specified, FxProfiler runs and gather profiling info. "
+            "Save results to `examples/results/arch-name/ ."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -124,6 +132,14 @@ def main() -> None:
         )
         prepared_model.to(device)
         qdq_model.to(device)
+
+    if args.enable_profile:
+        float_model.to(device)
+        qdq_model.to(device)
+        save_dir = Path(f"examples/results/{args.arch}")
+        save_dir.mkdir(parents=True, exist_ok=True)
+        perf_profile(float_model, example_inputs, save_dir / "float_prof.json")
+        perf_profile(qdq_model, example_inputs, save_dir / "qdq_prof.json")
 
     if "float" in args.eval_options:
         _ = evaluate(cfg, args.arch, float_model, "float", test_loader, seed)

@@ -16,8 +16,11 @@ from src.gml_lab.quantizer import (
     gml_convert_fx,
     gml_prepare_fx,
 )
+from tools.profiler import FxProfiler
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     import mmengine
     from torch.ao.quantization.qconfig_mapping import QConfigMapping
     from torch.utils.data import DataLoader
@@ -72,3 +75,21 @@ def quantize(
     qdq_model = gml_convert_fx(prepared_model, qconfig_mapping, None, fake_quantize)
 
     return prepared_model, qdq_model
+
+
+def perf_profile(
+    model: torch.nn.Module | torch.fx.GraphModule,
+    example_inputs: tuple[torch.Tensor, ...],
+    save_path: str | Path | None = None,
+) -> None:
+    """Perform profiling."""
+    if isinstance(model, torch.nn.Module):  # Assume float_model
+        float_model = FxWrapper(model)
+        gm = torch.fx.symbolic_trace(float_model)
+    if isinstance(model, torch.fx.GraphModule):
+        gm = model
+    profiler = FxProfiler(gm)
+    profiler.run(*example_inputs)
+    if save_path is not None:
+        profiler.dump_to_json(save_path)
+    profiler.print_summary()
