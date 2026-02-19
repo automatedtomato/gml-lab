@@ -12,7 +12,7 @@ except ImportError:
     custom_ops = None
 
 
-seeds = [int(os.getenv("SET_SEED", time.time()))]
+seeds = [int(os.getenv("SET_SEED", time.time_ns()))]
 
 input_shapes = [
     (1024, 1024),

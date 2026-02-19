@@ -26,7 +26,7 @@ float_model = torch.fx.symbolic_trace(model)
 _, qdq_model = quantize_model(model)
 
 
-seeds = [int(os.getenv("SET_SEED", time.time()))]
+seeds = [int(os.getenv("SET_SEED", time.time_ns()))]
 models = [float_model, qdq_model]
 
 

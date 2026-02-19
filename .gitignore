@@ -26,6 +26,7 @@ work_dirs/
 tests/results/*
 examples/results/*
 results/*
+tests/*/results/*
 tmp/*
 
 

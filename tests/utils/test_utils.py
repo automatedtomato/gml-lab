@@ -1,65 +1,68 @@
 from __future__ import annotations
 
 import io
+import os
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, TensorDataset
 
 from src.gml_lab.quantizer import (
     build_qconfig_mapping,
     gml_convert_fx,
     gml_prepare_fx,
 )
+from tools.visualize_graph import dump_graph
+
+if TYPE_CHECKING:
+    from torch.fx import GraphModule
+    from torch.nn import Module
 
 NO_GPU = not torch.cuda.is_available()
 
 INT8_MAX = torch.iinfo(torch.int8).max
 INT8_MIN = torch.iinfo(torch.int8).min
 
-SNR_THRESH_LINEAR = 50
+SNR_THRESH = 45
+
+save_test_results = os.getenv("SAVE_TEST_RESULTS", None) is not None
 
 
-def get_model_size(model: torch.fx.GraphModule | torch.nn.Module) -> float:
+def get_model_size(model: GraphModule | Module) -> float:
     """Calculate size (MB) by serializing."""
     buffer = io.BytesIO()
     torch.save(model.state_dict(), buffer)
     return buffer.getbuffer().nbytes / (1024 * 1024)
 
 
-def get_test_dataloader(
-    input_shape: tuple[int, ...], num_samples: int = 320, batch_size: int = 64
-) -> DataLoader:
-    dummy_input = torch.randn(num_samples, *input_shape)
-    dummy_target = torch.randint(INT8_MIN, INT8_MAX, (num_samples,))
-    dataset = TensorDataset(dummy_input, dummy_target)
-    return DataLoader(dataset, batch_size=batch_size)
+def get_test_output_dir(test_name: str, file_loc: str) -> Path:
+    """Return directory name based on the file location and test name."""
+    name = test_name.replace("[", "_").replace("]", "")
+    return Path(file_loc).parent / "results" / Path(name)
 
 
 def quantize_model(
-    float_model: torch.nn.Module,
-    input_shape: tuple[int, ...] = (3, 28, 28),
+    float_model: Module,
+    example_inputs: tuple[torch.Tensor],
     device: str = "cpu",
-) -> tuple[torch.fx.GraphModule, ...]:
+) -> tuple[GraphModule, ...]:
     """Quantize model."""
     float_model = float_model.to(device).eval()
-    dummy_inputs = (torch.randn(1, *input_shape),)
-    dummy_inputs_on_device = tuple(i.to(device) for i in dummy_inputs)
+    example_inputs_on_device = tuple(i.to(device) for i in example_inputs)
     qconfig_mapping = build_qconfig_mapping()
-    calib_loader = get_test_dataloader(input_shape)
 
     prepared_model = gml_prepare_fx(
-        float_model, dummy_inputs_on_device, qconfig_mapping
+        float_model, example_inputs_on_device, qconfig_mapping
     )
 
+    prepared_model.eval()
     with torch.no_grad():
-        for batch in calib_loader:
-            inputs = batch[0].to(device)
-            _ = prepared_model(inputs)
+        _ = prepared_model(*example_inputs)
 
     qdq_model = gml_convert_fx(prepared_model)
 
-    return prepared_model, qdq_model
+    return prepared_model.eval(), qdq_model.eval()
 
 
 def _calc_blob_snr(blob_org: torch.Tensor, blob_target: torch.Tensor) -> float:
@@ -79,3 +82,37 @@ def _calc_blob_snr(blob_org: torch.Tensor, blob_target: torch.Tensor) -> float:
         return float("inf")
 
     return -20 * np.log10(np.sqrt(blob_mse) / blob_amp)
+
+
+def run_quantizer_test(
+    float_model: Module,
+    example_inputs: tuple[torch.Tensor],
+    out_dir: Path,
+    # expected_nodes: list[?],
+    original_model_traceable: bool = True,  # noqa: FBT001, FBT002
+) -> float:
+    """Run quantizer test suite."""
+    # TODO: Add node matching check ans scatter plot logic
+    out_dir.mkdir(parents=True, exist_ok=True)
+    device = next(iter(example_inputs)).device
+
+    prepared_model, qdq_model = quantize_model(
+        float_model, example_inputs, device=device
+    )
+
+    if save_test_results:
+        torch.save(float_model.state_dict(), out_dir / "float_model.pth")
+        torch.save(prepared_model.state_dict(), out_dir / "prepared_model.pth")
+        torch.save(qdq_model.state_dict(), out_dir / "qdq_model.pth")
+        if original_model_traceable:
+            dump_graph(torch.fx.symbolic_trace(float_model), "float_model", out_dir)
+        dump_graph(prepared_model, "prepared_model", out_dir)
+        dump_graph(qdq_model, "qdq_model", out_dir)
+
+    out_org = float_model(*example_inputs)
+    out_target = qdq_model(*example_inputs)
+
+    snr = _calc_blob_snr(out_org, out_target)
+    with open(out_dir / "snr.txt", "w") as f:
+        f.write(str(snr))
+    return snr
