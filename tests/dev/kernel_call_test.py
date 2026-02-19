@@ -4,7 +4,7 @@ import time
 import pytest
 import torch
 
-from tests.utils.test_utils import NO_GPU, SNR_THRESH_LINEAR, _calc_blob_snr
+from tests.utils.test_utils import NO_GPU, SNR_THRESH, _calc_blob_snr
 
 try:
     import gml_lab_custom_ops as custom_ops
@@ -47,4 +47,4 @@ def test_custom_relu_kernel(
 
     snr = _calc_blob_snr(ref_output, custom_output)
 
-    assert snr > SNR_THRESH_LINEAR, f"{snr=:.2f} dB < {SNR_THRESH_LINEAR=} dB"
+    assert snr > SNR_THRESH, f"{snr=:.2f} dB < {SNR_THRESH=} dB"
