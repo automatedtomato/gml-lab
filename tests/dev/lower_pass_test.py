@@ -10,6 +10,7 @@ from tests.utils.test_utils import quantize_model
 models = [ReLUFunc1, ReLUFunc2, ReLUMethod, ReLUModule]
 
 
+@pytest.mark.gpu
 @pytest.mark.parametrize("model", models)
 def test_lower_pass(model: torch.nn.Module) -> None:
     model = model()
