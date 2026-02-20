@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
@@ -84,6 +85,28 @@ def get_node_info(node: Node, modules: dict[str, Module]) -> NodeInfo | None:
         msg = f"Node type {node.op} is not supported."
         raise TypeError(msg)
     return node_info
+
+
+def generate_scatter(
+    ref_model: GraphModule | Module,
+    target_model: GraphModule,
+    example_inputs: tuple[torch.Tensor],
+    out_dir: Path,
+) -> None:
+    """Compare results of target and reference models and draw scatter plot."""
+    out_ref = ref_model(*example_inputs)
+    out_target = target_model(*example_inputs)
+    out_ref_flat = out_ref.detach().cpu().numpy().flatten()
+    out_target_flat = out_target.detach().cpu().numpy().flatten()
+    assert len(out_ref_flat) == len(out_target_flat)
+
+    diff = out_target_flat != out_ref_flat
+    plt.plot(out_ref_flat[diff], out_target_flat[diff], ".", alpha=0.5)
+    plt.axline((0, 0), slope=1.0, color="red")
+    plt.xlabel("ref")
+    plt.ylabel("target")
+    plt.savefig(out_dir / "plt.png")
+    plt.close()
 
 
 def get_model_size(model: GraphModule | Module) -> float:
@@ -206,6 +229,7 @@ def run_quantizer_test(
             dump_graph(torch.fx.symbolic_trace(float_model), "float_model", out_dir)
         dump_graph(prepared_model, "prepared_model", out_dir)
         dump_graph(gml_model, "qdq_model", out_dir)
+        generate_scatter(float_model, gml_model, example_inputs, out_dir)
 
     if expected_nodes is not None:
         check_graph_structure(gml_model, expected_nodes)
