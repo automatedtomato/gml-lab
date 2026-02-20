@@ -9,8 +9,8 @@ import torch
 from examples.utils import perf_profile, prepare_dataloader, quantize, set_seed
 from src.gml_lab.config_builder import build_mm_config
 from src.gml_lab.evaluation import evaluate
+from src.gml_lab.lowering.lower_to_gml import lower_to_gml
 from src.gml_lab.modeling import load_model
-from src.gml_lab.quantizer import build_qconfig_mapping
 from tools.layer_by_layer_analysis import generate_analysis_report
 from tools.visualize_graph import dump_graph
 
@@ -105,46 +105,61 @@ def main() -> None:
     org_input = next(iter(test_loader))
     example_input = float_model.data_preprocessor(org_input, training=False)["inputs"]
     example_inputs = (example_input.to(device),)
+    example_inputs = tuple(i.to(device) for i in example_input)
 
-    qconfig_mapping = build_qconfig_mapping()
     calib_images = args.batch_size if args.calib_images is None else args.calib_images
     total_calib_batches = math.ceil(calib_images / args.batch_size)
 
     prepared_model, qdq_model = quantize(
         float_model,
         example_inputs,
-        qconfig_mapping,
         calib_loader,
         total_calib_batches,
         data_preprocessor,
     )
 
+    gml_model = lower_to_gml(qdq_model)
+
     if args.graph_dump_dir is not None:
         dump_graph(prepared_model, args.arch + "_prepared", args.graph_dump_dir)
         dump_graph(qdq_model, args.arch + "_qdq", args.graph_dump_dir)
+        dump_graph(gml_model, args.arch + "_cuda", args.graph_dump_dir)
 
     if args.lbl_dump_dir is not None:
-        prepared_model.eval().to("cpu")
-        qdq_model.eval().to("cpu")
-        analysis_input = example_input[:1].to("cpu")
+        prepared_model.eval()
+        qdq_model.eval()
+        gml_model.eval()
+        analysis_input = example_input[:1].to(device)
+        # prepared_model.eval().to("cpu")
+        # qdq_model.eval().to("cpu")
+        # gml_model.eval().to("cpu")
+        # analysis_input = example_input[:1].to("cpu")
         generate_analysis_report(
             prepared_model, qdq_model, analysis_input, args.lbl_dump_dir
         )
+        generate_analysis_report(
+            qdq_model, gml_model, analysis_input, args.lbl_dump_dir
+        )
         prepared_model.to(device)
         qdq_model.to(device)
+        gml_model.to(device)
 
     if args.enable_profile:
         float_model.to(device)
         qdq_model.to(device)
+        gml_model.to(device)
         save_dir = Path(f"examples/results/{args.arch}")
         save_dir.mkdir(parents=True, exist_ok=True)
         perf_profile(float_model, example_inputs, save_dir / "float_prof.json")
         perf_profile(qdq_model, example_inputs, save_dir / "qdq_prof.json")
+        perf_profile(gml_model, example_inputs, save_dir / "cuda_prof.json")
 
     if "float" in args.eval_options:
         _ = evaluate(cfg, args.arch, float_model, "float", test_loader, seed)
     if "qdq" in args.eval_options:
         _ = evaluate(cfg, args.arch, qdq_model, "qdq", test_loader, seed)
+    if "cuda" in args.eval_options:
+        _ = evaluate(cfg, args.arch, qdq_model, "cuda", test_loader, seed)
 
 
 if __name__ == "__main__":
