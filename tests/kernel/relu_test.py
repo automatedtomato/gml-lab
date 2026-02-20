@@ -53,13 +53,14 @@ def test_relu(
         NodeInfo.call_method("dequantize"),
     ]
 
-    test_inputs = (torch.randn(input_shape),)
+    example_inputs = (torch.randn(input_shape),)
     model = model().to(device)
     snr = run_quantizer_test(
         model,
-        test_inputs,
+        example_inputs,
         out_dir,
         expected_nodes,
     )
 
+    print(f"{snr}=")
     assert snr > SNR_THRESH, f"{snr=} < {SNR_THRESH}"

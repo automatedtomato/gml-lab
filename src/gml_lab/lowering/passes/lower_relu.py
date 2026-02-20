@@ -13,12 +13,6 @@ from .utils import extract_qparams
 if TYPE_CHECKING:
     from torch.fx import GraphModule
 
-try:
-    import gml_lab_custom_ops as custom_ops
-except ImportError as e:
-    print(f"Error importing custom_ops: {e}")
-    custom_ops = None
-
 
 def lower_relu(gm: GraphModule) -> None:
     """Find `DQ -> ReLu -> Q` pattern and convert to custom kernel module."""

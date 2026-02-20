@@ -2,6 +2,16 @@ from __future__ import annotations
 
 import torch
 
+from src.gml_lab.logger import get_logger
+
+logger = get_logger("gml_q_relu")
+
+try:
+    import gml_lab_custom_ops as custom_ops
+except ImportError as e:
+    logger.error(f"Error importing custom_ops: {e}")
+    custom_ops = None
+
 
 class GMLQuantReLU(torch.nn.Module):
     """GML custom quantized ReLU kernel class."""
@@ -17,8 +27,13 @@ class GMLQuantReLU(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Run kernel simuated forward pass."""
-        _in = x.int_repr()
-        out = torch.clamp(_in, min=self.zero_point.item())
+        x_q = x.int_repr()
+        zp = self.zero_point.item()
+        if custom_ops is None:
+            out = torch.clamp(x_q, min=zp)
+        else:
+            out = custom_ops.quant_relu(x_q, zp)
+
         return torch._make_per_tensor_quantized_tensor(
-            out, scale=self.scale.item(), zero_point=self.zero_point.item()
+            out, scale=self.scale.item(), zero_point=zp
         )
