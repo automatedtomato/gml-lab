@@ -7,7 +7,7 @@ from torch.fx import GraphModule, Node
 
 
 def is_quantize_node(node: Node) -> bool:
-    """Return true if give node is quantize function."""
+    """Return true if the give node is quantize function."""
     return (
         isinstance(node, Node)
         and node.op in ["call_function", "call_module"]
@@ -15,8 +15,26 @@ def is_quantize_node(node: Node) -> bool:
     )
 
 
+def is_per_tensor_quant_node(node: Node) -> bool:
+    """Return true if the give node is per-tensor quantize function."""
+    return (
+        isinstance(node, Node)
+        and node.op in ["call_function", "call_module"]
+        and node.target == torch.quantize_per_tensor
+    )
+
+
+def is_per_channel_quant_node(node: Node) -> bool:
+    """Return true if the give node is per-channel quantize function."""
+    return (
+        isinstance(node, Node)
+        and node.op in ["call_function", "call_module"]
+        and node.target == torch.quantize_per_channel
+    )
+
+
 def is_observer_node(node: Node, modules: dict[str, GraphModule]) -> bool:
-    """Return true if given node is observer."""
+    """Return true if the given node is observer."""
     return (
         isinstance(node, Node)
         and node.op == "call_module"
@@ -32,4 +50,13 @@ def is_fake_quant_node(node: Node, modules: dict[str, GraphModule]) -> bool:
         and node.op == "call_module"
         and node.target in modules
         and isinstance(type(modules[node.target]), FakeQuantizeBase)
+    )
+
+
+def is_dequant_node(node: Node) -> bool:
+    """Return True if the given node is a dequantize node."""
+    return (
+        isinstance(node, Node)
+        and node.op == "call_method"
+        and node.target == "dequantize"
     )

@@ -166,7 +166,7 @@ class ActivationCollector:
 
         return hook
 
-    def __enter__(self) -> None:  # noqa: D105
+    def __enter__(self) -> None:
         self.outputs.clear()
         self.hooks = []
         for name in self.target_names:
@@ -175,7 +175,7 @@ class ActivationCollector:
             self.hooks.append(h)
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:  # noqa: ANN001, D105
+    def __exit__(self, exc_type, exc_value, traceback) -> None:  # noqa: ANN001
         for h in self.hooks:
             h.remove()
 
