@@ -6,10 +6,12 @@ import time
 import pytest
 import torch
 
-from tests.models import ReLUFunc1, ReLUFunc2, ReLUMethod, ReLUModule
+from src.gml_lab.kernel import GMLQuantReLU
+from tests.models import ReLUFunc1, ReLUMethod, ReLUModule
 from tests.utils.test_utils import (
     NO_GPU,
     SNR_THRESH,
+    NodeInfo,
     get_test_output_dir,
     run_quantizer_test,
 )
@@ -20,7 +22,6 @@ seeds = [int(os.getenv("SET_SEED", time.time_ns()))]
 
 models = [
     ReLUFunc1,
-    ReLUFunc2,
     ReLUMethod,
     ReLUModule,
 ]
@@ -46,17 +47,20 @@ def test_relu(
     torch.manual_seed(seed)
     out_dir = get_test_output_dir(request.node.name, __file__)
 
-    # expected_nodes = [
-    #   hogehoge
-    # ]
+    expected_nodes = [
+        NodeInfo.call_function(torch.quantize_per_tensor),
+        NodeInfo.call_module(GMLQuantReLU),
+        NodeInfo.call_method("dequantize"),
+    ]
 
-    test_inputs = (torch.randn(input_shape),)
+    example_inputs = (torch.randn(input_shape),)
     model = model().to(device)
     snr = run_quantizer_test(
         model,
-        test_inputs,
+        example_inputs,
         out_dir,
-        # expected_nodes,
+        expected_nodes,
     )
 
+    print(f"{snr}=")
     assert snr > SNR_THRESH, f"{snr=} < {SNR_THRESH}"

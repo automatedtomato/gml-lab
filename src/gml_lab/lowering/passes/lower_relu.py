@@ -4,60 +4,61 @@ from typing import TYPE_CHECKING
 
 import torch
 
+from src.gml_lab.kernel import GMLQuantReLU
 from src.gml_lab.logger import get_logger
+from src.gml_lab.utils import is_dequant_node, is_per_tensor_quant_node
+
+from .utils import extract_qparams
 
 if TYPE_CHECKING:
     from torch.fx import GraphModule
 
-try:
-    import gml_lab_custom_ops as custom_ops
-except ImportError as e:
-    print(f"Error importing custom_ops: {e}")
-    custom_ops = None
-
 
 def lower_relu(gm: GraphModule) -> None:
-    """Lower ReLU in graph module."""
+    """Find `DQ -> ReLu -> Q` pattern and convert to custom kernel module."""
     logger = get_logger("lower_pass")
 
-    if custom_ops is None:
-        logger.warning("custom_ops is None. Skipping pass.")
-        return
-
     relus = [torch.nn.functional.relu, torch.relu]
+    cnt = 0
     graph = gm.graph
 
     for node in graph.nodes:
-        if (node.op == "call_function" and node.target in relus) or (
-            node.op == "call_method" and node.target == "relu"
+        if not is_per_tensor_quant_node(node):
+            continue
+        target_node = node.args[0]
+        is_target_valid = False
+        if (target_node.op == "call_function" and target_node.target in relus) or (
+            target_node.op == "call_method" and target_node.target == "relu"
         ):
-            new_name = graph._graph_namespace.create_name("cuda_" + node.name, None)
-            with gm.graph.inserting_after(node):
-                new_node = graph.call_function(
-                    custom_ops.relu, args=node.args, kwargs={}
-                )
-                node.replace_all_uses_with(new_node)
-                new_node.name = new_name
-            graph.erase_node(node)
-            logger.info(
-                f' The function/method "{node.name}" is replaced with '
-                f'custom_ops function "{new_node.name}"'
-            )
-
-        elif node.op == "call_module":
-            submodule = gm.get_submodule(node.target)
+            is_target_valid = True
+        elif target_node.op == "call_module":
+            submodule = gm.get_submodule(target_node.target)
             if isinstance(submodule, torch.nn.ReLU):
-                new_name = graph._graph_namespace.create_name("cuda_" + node.name, None)
-                with gm.graph.inserting_after(node):
-                    new_node = graph.call_function(
-                        custom_ops.relu, args=node.args, kwargs={}
-                    )
-                    node.replace_all_uses_with(new_node)
-                    new_node.name = new_name
-                graph.erase_node(node)
-                logger.info(
-                    f' The module "{node.name}" is replaced with '
-                    f'custom_ops function "{new_node.name}"'
-                )
+                is_target_valid = True
+
+        if not is_target_valid:
+            continue
+        dq_node = target_node.args[0]
+
+        if not is_dequant_node(dq_node):
+            continue
+
+        kwargs = extract_qparams(gm, node)
+        new_module = GMLQuantReLU(**kwargs)
+        new_name = graph._graph_namespace.create_name(f"gml_q_relu_{cnt}", None)
+        gm.add_submodule(new_name, new_module)
+
+        with gm.graph.inserting_after(node):
+            new_node = graph.call_module(new_name, args=(dq_node.args[0],), kwargs={})
+            node.replace_all_uses_with(new_node)
+            new_node.name = new_name
+        graph.erase_node(node)
+        graph.erase_node(target_node)
+        graph.erase_node(dq_node)
+        logger.info(
+            f' The function/method "{target_node.name}" is replaced with '
+            f'the new module "{new_node.name}"'
+        )
+        cnt += 1
     gm.graph.lint()
     gm.recompile()
