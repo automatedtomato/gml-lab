@@ -5,6 +5,11 @@ from torch.ao.quantization.fake_quantize import FakeQuantizeBase
 from torch.ao.quantization.observer import ObserverBase
 from torch.fx import GraphModule, Node
 
+INT8_MAX = torch.iinfo(torch.int8).max
+INT8_MIN = torch.iinfo(torch.int8).min
+UINT8_MAX = torch.iinfo(torch.uint8).max
+UINT8_MIN = torch.iinfo(torch.uint8).min
+
 
 def is_quantize_node(node: Node) -> bool:
     """Return true if the give node is quantize function."""

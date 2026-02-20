@@ -62,5 +62,4 @@ def test_relu(
         expected_nodes,
     )
 
-    print(f"{snr}=")
     assert snr > SNR_THRESH, f"{snr=} < {SNR_THRESH}"

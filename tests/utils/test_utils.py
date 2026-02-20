@@ -12,7 +12,8 @@ import torch
 
 from src.gml_lab.lowering.lower_to_gml import lower_to_gml
 from src.gml_lab.quantizer import (
-    build_gml_qconfig_mapping,
+    get_gml_backend_config,
+    get_gml_qconfig_mapping,
     gml_convert_fx,
     gml_prepare_fx,
 )
@@ -130,16 +131,18 @@ def quantize_model(
 ) -> tuple[GraphModule, ...]:
     """Quantize model."""
     float_model = float_model.eval()
-    # qconfig_mapping = build_qconfig_mapping()
-    qconfig_mapping = build_gml_qconfig_mapping(method)
+    backend_config = get_gml_backend_config()
+    qconfig_mapping = get_gml_qconfig_mapping(method)
 
-    prepared_model = gml_prepare_fx(float_model, example_inputs, qconfig_mapping)
+    prepared_model = gml_prepare_fx(
+        float_model, example_inputs, qconfig_mapping, backend_config
+    )
 
     prepared_model.eval()
     with torch.no_grad():
         _ = prepared_model(*example_inputs)
 
-    qdq_model = gml_convert_fx(prepared_model)
+    qdq_model = gml_convert_fx(prepared_model, qconfig_mapping, backend_config)
 
     return prepared_model.eval(), qdq_model.eval()
 

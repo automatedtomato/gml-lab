@@ -13,6 +13,8 @@ from mmpretrain.utils import register_all_modules
 from src.gml_lab.modeling import FxWrapper
 from src.gml_lab.quantizer import (
     calibrate_model,
+    get_gml_backend_config,
+    get_gml_qconfig_mapping,
     gml_convert_fx,
     gml_prepare_fx,
 )
@@ -22,7 +24,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import mmengine
-    from torch.ao.quantization.qconfig_mapping import QConfigMapping
     from torch.utils.data import DataLoader
 
 
@@ -57,22 +58,29 @@ def prepare_dataloader(cfg: mmengine.config.Config) -> tuple[DataLoader, ...]:
 def quantize(
     float_model: torch.nn.Module,
     example_inputs: tuple[Any, ...],
-    qconfig_mapping: QConfigMapping | dict[str, Any],
     calib_loader: Any,  # noqa: ANN401
     total_calib_batches: int,
     data_preprocessor: torch.nn.Module,
+    quant_method: str = "per_tensor",
     fake_quantize: bool = True,  # noqa: FBT001, FBT002
 ) -> tuple[torch.fx.GraphModule, ...]:
     """Quantize model."""
     wrapped_model = FxWrapper(float_model)
-    prepared_model = gml_prepare_fx(wrapped_model, example_inputs, qconfig_mapping)
+    backend_config = get_gml_backend_config()
+    qconfig_mapping = get_gml_qconfig_mapping(quant_method)
+
+    prepared_model = gml_prepare_fx(
+        wrapped_model, example_inputs, qconfig_mapping, backend_config
+    )
     prepared_model = calibrate_model(
         prepared_model,
         calib_loader=calib_loader,
         data_preprocessor=data_preprocessor,
         total_calib_batches=total_calib_batches,
     )
-    qdq_model = gml_convert_fx(prepared_model, qconfig_mapping, None, fake_quantize)
+    qdq_model = gml_convert_fx(
+        prepared_model, qconfig_mapping, backend_config, fake_quantize
+    )
 
     return prepared_model, qdq_model
 

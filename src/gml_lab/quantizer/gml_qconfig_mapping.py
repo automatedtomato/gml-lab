@@ -3,8 +3,7 @@ from torch.ao.quantization import get_default_qconfig_mapping, observer
 from torch.ao.quantization.qconfig import QConfig
 from torch.ao.quantization.qconfig_mapping import QConfigMapping
 
-INT8_MAX = torch.iinfo(torch.int8).max
-INT8_MIN = torch.iinfo(torch.int8).min
+from src.gml_lab.utils import INT8_MAX, INT8_MIN
 
 
 def get_gml_qconfig(method: str = "per_tensor") -> QConfig:
@@ -12,10 +11,10 @@ def get_gml_qconfig(method: str = "per_tensor") -> QConfig:
     if method == "per_tensor":
         qconfig = QConfig(
             activation=observer.MinMaxObserver.with_args(
-                dtype=torch.quint8,
+                dtype=torch.qint8,
                 qscheme=torch.per_tensor_symmetric,
-                quant_min=0,
-                quant_max=255,
+                quant_min=INT8_MIN,
+                quant_max=INT8_MAX,
             ),
             weight=observer.default_per_channel_weight_observer,
         )
@@ -25,7 +24,7 @@ def get_gml_qconfig(method: str = "per_tensor") -> QConfig:
     return qconfig
 
 
-def build_gml_qconfig_mapping(method: str = "per_tensor") -> QConfigMapping:
+def get_gml_qconfig_mapping(method: str = "per_tensor") -> QConfigMapping:
     """Get QConfig mapping for PTQ.
 
     Args:
