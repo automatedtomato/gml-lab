@@ -128,6 +128,7 @@ def check_graph_structure(gm: GraphModule, expected_nodes: list[NodeInfo]) -> No
 def quantize_model(
     float_model: Module,
     example_inputs: tuple[torch.Tensor, ...],
+    device: str = "cpu",
     method: str = "per_tensor",
     device: str = "cpu",
 ) -> tuple[GraphModule, ...]:
@@ -141,6 +142,7 @@ def quantize_model(
     prepared_model = gml_prepare_fx(
         float_model, example_inputs, qconfig_mapping, backend_config
     )
+    example_inputs = tuple(i.to(device) for i in example_inputs)
 
     prepared_model.eval().to(device)
     with torch.no_grad():
@@ -165,6 +167,7 @@ def run_quantizer_test(
     example_inputs = tuple(i.to(device) for i in example_inputs)
     if out_dir is not None:
         out_dir.mkdir(parents=True, exist_ok=True)
+    float_model = float_model.to(device)
 
     prepared_model, qdq_model = quantize_model(
         float_model, example_inputs, device=device

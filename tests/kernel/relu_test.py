@@ -52,12 +52,13 @@ def test_relu(
         NodeInfo.call_method("dequantize"),
     ]
 
-    example_inputs = (torch.rand(input_shape),)
-    model = model().to(device)
+    example_inputs = (torch.randn(input_shape),)
+    model = model()
     snr = run_quantizer_test(
         model,
         example_inputs,
         out_dir,
+        device,
         expected_nodes,
         test_mode="lower_acc",
         device=device,

@@ -3,7 +3,10 @@ from __future__ import annotations
 import copy
 from typing import TYPE_CHECKING, Any
 
-from torch.ao.quantization.quantize_fx import convert_fx, convert_to_reference_fx
+from torch.ao.quantization.quantize_fx import (
+    convert_fx,
+    convert_to_reference_fx,
+)
 
 from src.gml_lab.logger import get_logger
 

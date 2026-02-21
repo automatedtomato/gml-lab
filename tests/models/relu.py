@@ -1,10 +1,9 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
-from torch.nn import Module
 
 
-class ReLUModule(Module):
+class ReLUModule(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.relu = nn.ReLU()
@@ -13,16 +12,16 @@ class ReLUModule(Module):
         return self.relu(x)
 
 
-class ReLUFunc1(Module):
+class ReLUFunc1(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return F.relu(x)
 
 
-class ReLUFunc2(Module):
+class ReLUFunc2(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.relu(x)
 
 
-class ReLUMethod(Module):
+class ReLUMethod(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x.relu()
