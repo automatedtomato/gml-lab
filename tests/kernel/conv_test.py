@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 import torch
 
-from tests.models import ConvBN, ConvReLU
+from tests.models import ConvBN, ConvReLUMod, ConvReLUFunc, ConvBNReLUFunc
 from tests.utils.test_utils import (
     NO_GPU,
     SNR_THRESH,
@@ -22,8 +22,10 @@ seeds = [int(os.getenv("SET_SEED", time.time_ns()))]
 
 models = [
     # ConvModule,
-    # ConvReLU,
-    ConvBN,
+    # ConvReLUMod,
+    # ConvReLUFunc,
+    ConvBNReLUFunc
+    # ConvBN,
 ]
 
 INPUT_SHAPE = [224, 224]
