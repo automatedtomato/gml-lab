@@ -1,4 +1,4 @@
-from .conv import ConvBN, ConvBNReLU, ConvModule, ConvReLU
+from .conv import ConvBN, ConvBNReLUFunc, ConvBNReLUMod, ConvModule, ConvReLUFunc, ConvReLUMod
 from .relu import ReLUFunc1, ReLUFunc2, ReLUMethod, ReLUModule
 
 __all__ = [
@@ -10,4 +10,8 @@ __all__ = [
     "ReLUFunc2",
     "ReLUMethod",
     "ReLUModule",
+    "ConvReLUMod",
+    "ConvBNReLUMod",
+    "ConvReLUFunc",
+    "ConvBNReLUFunc"
 ]
