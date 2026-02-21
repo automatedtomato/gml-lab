@@ -145,6 +145,7 @@ def quantize_model(
     prepared_model = gml_prepare_fx(
         float_model, test_inputs, qconfig_mapping, backend_config
     )
+    example_inputs = tuple(i.to(device) for i in example_inputs)
 
     prepared_model.eval().to(device)
     with torch.no_grad():

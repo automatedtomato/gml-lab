@@ -26,6 +26,7 @@ default_int8_config = DTypeConfig(
     bias_dtype=torch.float,
 )
 
+__all__ = ["get_gml_backend_config"]
 
 def _get_default_configs() -> list[BackendPatternConfig]:
     default_ops = [

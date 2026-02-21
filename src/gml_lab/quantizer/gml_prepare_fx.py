@@ -4,7 +4,7 @@ import copy
 from typing import TYPE_CHECKING, Any
 
 import torch
-from torch.ao.quantization.quantize_fx import prepare_fx
+from torch.ao.quantization.quantize_fx import fuse_fx, prepare_fx
 
 from src.gml_lab.quantizer.gml_backend_config import get_prepare_custom_config
 from src.gml_lab.quantizer.passes import (
