@@ -6,17 +6,14 @@ import time
 import pytest
 import torch
 
-from src.gml_lab.kernel import GMLQuantReLU
 from tests.models import ReLUFunc1, ReLUMethod, ReLUModule
 from tests.utils.test_utils import (
-    NO_GPU,
     SNR_THRESH,
-    NodeInfo,
     get_test_output_dir,
     run_quantizer_test,
 )
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cpu"
 
 seeds = [int(os.getenv("SET_SEED", time.time_ns()))]
 
@@ -32,7 +29,6 @@ input_shapes = [
 ]
 
 
-@pytest.mark.skipif(NO_GPU, reason="GPU not available")
 @pytest.mark.parametrize("seed", seeds)
 @pytest.mark.parametrize("model", models)
 @pytest.mark.parametrize("input_shape", input_shapes)
@@ -46,21 +42,10 @@ def test_relu(
     torch.manual_seed(seed)
     out_dir = get_test_output_dir(request.node.name, __file__)
 
-    expected_nodes = [
-        NodeInfo.call_function(torch.quantize_per_tensor),
-        NodeInfo.call_module(GMLQuantReLU),  # type: ignore
-        NodeInfo.call_method("dequantize"),
-    ]
-
     example_inputs = (torch.rand(input_shape),)
     model = model().to(device)
     snr = run_quantizer_test(
-        model,
-        example_inputs,
-        out_dir,
-        expected_nodes,
-        test_mode="lower_acc",
-        device=device,
+        model, example_inputs, out_dir, test_mode="quant_acc", device=device
     )
 
     assert snr > SNR_THRESH, f"{snr=} < {SNR_THRESH}"  # type: ignore
