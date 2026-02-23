@@ -4,7 +4,7 @@ import copy
 import io
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,6 +20,7 @@ from src.gml_lab.quantizer import (
 from tools.visualize_graph import dump_graph
 
 from .node_info import NodeInfo, get_node_info
+from .test_logger import get_logger
 
 if TYPE_CHECKING:
     from torch.fx import GraphModule
@@ -128,17 +129,20 @@ def quantize_model(
     float_model: Module,
     example_inputs: tuple[torch.Tensor, ...],
     method: str = "per_tensor",
+    device: str = "cpu",
 ) -> tuple[GraphModule, ...]:
     """Quantize model."""
     float_model = float_model.eval()
     backend_config = get_gml_backend_config()
     qconfig_mapping = get_gml_qconfig_mapping(method)
 
+    example_inputs = tuple(i.to(device) for i in example_inputs)
+
     prepared_model = gml_prepare_fx(
         float_model, example_inputs, qconfig_mapping, backend_config
     )
 
-    prepared_model.eval()
+    prepared_model.eval().to(device)
     with torch.no_grad():
         _ = prepared_model(*example_inputs)
 
@@ -150,37 +154,53 @@ def quantize_model(
 def run_quantizer_test(
     float_model: Module,
     example_inputs: tuple[torch.Tensor, ...],
-    out_dir: Path,
+    out_dir: Path | None = None,
     expected_nodes: list[NodeInfo] | None = None,
+    test_mode: Literal["unify_pass", "quant_acc", "lower_acc"] = "unify_pass",
     original_model_traceable: bool = True,  # noqa: FBT001, FBT002
-) -> float:
+    device: str = "cpu",
+) -> float | None:
     """Run quantizer test suite."""
-    # TODO: Add scatter plot logic
-    out_dir.mkdir(parents=True, exist_ok=True)
+    logger = get_logger("run_quantizer_test")
+    example_inputs = tuple(i.to(device) for i in example_inputs)
+    if out_dir is not None:
+        out_dir.mkdir(parents=True, exist_ok=True)
 
-    prepared_model, qdq_model = quantize_model(float_model, example_inputs)
+    prepared_model, qdq_model = quantize_model(
+        float_model, example_inputs, device=device
+    )
 
-    gml_model = lower_to_gml(qdq_model)
+    if test_mode == "unify_pass" and expected_nodes is not None:
+        check_graph_structure(prepared_model, expected_nodes)
+        return None
 
-    if expected_nodes is not None:
-        check_graph_structure(gml_model, expected_nodes)
+    if test_mode == "quant_acc":
+        out_target = qdq_model(*example_inputs)
+
+    if test_mode == "lower_acc":
+        gml_model = lower_to_gml(qdq_model)
+        if expected_nodes is not None:
+            check_graph_structure(gml_model, expected_nodes)
+        out_target = gml_model(*example_inputs)
 
     out_org = float_model(*example_inputs)
-    out_target = qdq_model(*example_inputs)
 
-    if save_test_results:
-        torch.save(float_model.state_dict(), out_dir / "float_model.pth")
-        torch.save(prepared_model.state_dict(), out_dir / "prepared_model.pth")
-        torch.save(qdq_model.state_dict(), out_dir / "qdq_model.pth")
-        torch.save(gml_model.state_dict(), out_dir / "gml_model.pth")
-        if original_model_traceable:
-            dump_graph(torch.fx.symbolic_trace(float_model), "float_model", out_dir)
-        dump_graph(prepared_model, "prepared_model", out_dir)
-        dump_graph(qdq_model, "qdq_model", out_dir)
-        dump_graph(gml_model, "gml_model", out_dir)
-        generate_scatter(out_org, out_target, out_dir)
-
+    if save_test_results and out_dir is not None:
+        try:
+            torch.save(float_model.state_dict(), out_dir / "float_model.pth")
+            torch.save(prepared_model.state_dict(), out_dir / "prepared_model.pth")
+            torch.save(qdq_model.state_dict(), out_dir / "qdq_model.pth")
+            torch.save(gml_model.state_dict(), out_dir / "gml_model.pth")
+            if original_model_traceable:
+                dump_graph(torch.fx.symbolic_trace(float_model), "float_model", out_dir)
+            dump_graph(prepared_model, "prepared_model", out_dir)
+            dump_graph(qdq_model, "qdq_model", out_dir)
+            dump_graph(gml_model, "gml_model", out_dir)
+            generate_scatter(out_org, out_target, out_dir)
+        except Exception as e:
+            logger.error(f"Error while save test results: {e}")
     snr = calc_blob_snr(out_org, out_target)
-    with open(out_dir / "snr.txt", "w") as f:
-        f.write(str(snr))
+    if out_dir is not None:
+        with open(out_dir / "snr.txt", "w") as f:
+            f.write(str(snr))
     return snr

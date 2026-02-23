@@ -3,10 +3,12 @@ from __future__ import annotations
 import copy
 from typing import TYPE_CHECKING, Any
 
+import torch
 from torch.ao.quantization.quantize_fx import prepare_fx
 
+from src.gml_lab.quantizer.passes import unify_relu
+
 if TYPE_CHECKING:
-    import torch
     from torch.ao.quantization.backend_config import BackendConfig
     from torch.ao.quantization.qconfig_mapping import QConfigMapping
     from torch.fx import GraphModule
@@ -33,9 +35,12 @@ def gml_prepare_fx(
 
     """
     model = copy.deepcopy(model)
+    gm = torch.fx.symbolic_trace(model)
+
+    unify_relu(gm)
 
     return prepare_fx(
-        model=model,
+        model=gm,
         qconfig_mapping=qconfig_mapping,
         backend_config=backend_config,
         example_inputs=example_inputs,
