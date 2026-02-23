@@ -128,7 +128,6 @@ def check_graph_structure(gm: GraphModule, expected_nodes: list[NodeInfo]) -> No
 def quantize_model(
     float_model: Module,
     example_inputs: tuple[torch.Tensor, ...],
-    device: str = "cpu",
     method: str = "per_tensor",
     device: str = "cpu",
 ) -> tuple[GraphModule, ...]:
@@ -156,14 +155,15 @@ def quantize_model(
 def run_quantizer_test(
     float_model: Module,
     example_inputs: tuple[torch.Tensor, ...],
+    test_mode: Literal["unify_pass", "quant_acc", "lower_acc"],
     out_dir: Path | None = None,
     expected_nodes: list[NodeInfo] | None = None,
-    test_mode: Literal["unify_pass", "quant_acc", "lower_acc"] = "unify_pass",
     original_model_traceable: bool = True,  # noqa: FBT001, FBT002
     device: str = "cpu",
 ) -> float | None:
     """Run quantizer test suite."""
     logger = get_logger("run_quantizer_test")
+    float_model.eval()
     example_inputs = tuple(i.to(device) for i in example_inputs)
     if out_dir is not None:
         out_dir.mkdir(parents=True, exist_ok=True)

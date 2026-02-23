@@ -55,12 +55,11 @@ def test_relu(
     example_inputs = (torch.randn(input_shape),)
     model = model()
     snr = run_quantizer_test(
-        model,
-        example_inputs,
-        out_dir,
-        device,
-        expected_nodes,
+        float_model=model,
+        example_inputs=example_inputs,
         test_mode="lower_acc",
+        out_dir=out_dir,
+        expected_nodes=expected_nodes,
         device=device,
     )
 
