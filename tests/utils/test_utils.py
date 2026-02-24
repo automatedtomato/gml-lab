@@ -172,6 +172,8 @@ def run_quantizer_test(
     example_inputs = tuple(i.to(device) for i in example_inputs)
     calib_inputs = tuple(i.to(device) for i in calib_inputs)
 
+    calib_inputs = tuple(i.to(device) for i in calib_inputs)
+
     if out_dir is not None:
         out_dir.mkdir(parents=True, exist_ok=True)
     float_model = float_model.to(device)
