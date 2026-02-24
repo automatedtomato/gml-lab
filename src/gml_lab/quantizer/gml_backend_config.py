@@ -8,6 +8,7 @@ from torch.ao.quantization.backend_config import (
 )
 from torch.ao.quantization.fx.custom_config import PrepareCustomConfig
 
+import src.gml_lab.nn.fused_modules as fcnn
 import src.gml_lab.nn.modules as cnn
 
 default_int8_config = DTypeConfig(
@@ -24,6 +25,7 @@ def _get_default_backend_configs() -> list[BackendPatternConfig]:
     default_ops = [
         nn.ReLU,
         cnn.Add,
+        fcnn.AddReLU,
     ]
     default_configs: list[BackendPatternConfig] = []
     for op in default_ops:
@@ -50,5 +52,5 @@ def get_prepare_custom_config() -> PrepareCustomConfig:
     Some modules should not be traced during process in prepare_fx.
     Specify the modules in this function.
     """
-    non_traceable_modules = [cnn.Add]
+    non_traceable_modules = [cnn.Add, fcnn.AddReLU]
     return PrepareCustomConfig().set_non_traceable_module_classes(non_traceable_modules)
