@@ -4,7 +4,7 @@ import copy
 from typing import TYPE_CHECKING, Any
 
 import torch
-from torch.ao.quantization.quantize_fx import prepare_fx
+from torch.ao.quantization.quantize_fx import fuse_fx, prepare_fx
 
 from src.gml_lab.quantizer.passes import unify_relu
 
@@ -39,8 +39,11 @@ def gml_prepare_fx(
 
     unify_relu(gm)
 
+    gm.eval()
+    fused_model = fuse_fx(gm, backend_config=backend_config)
+
     return prepare_fx(
-        model=gm,
+        model=fused_model,
         qconfig_mapping=qconfig_mapping,
         backend_config=backend_config,
         example_inputs=example_inputs,

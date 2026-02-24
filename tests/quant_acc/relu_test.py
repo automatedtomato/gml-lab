@@ -8,7 +8,7 @@ import torch
 
 from tests.models import ReLUFunc1, ReLUMethod, ReLUModule
 from tests.utils.test_utils import (
-    SNR_THRESH,
+    SNR_THRESH_NONLINEAR,
     get_test_output_dir,
     run_quantizer_test,
 )
@@ -42,10 +42,10 @@ def test_relu(
     torch.manual_seed(seed)
     out_dir = get_test_output_dir(request.node.name, __file__)
 
-    example_inputs = (torch.rand(input_shape),)
+    test_inputs = (torch.rand(input_shape),)
     model = model().to(device)
     snr = run_quantizer_test(
-        model, example_inputs, out_dir, test_mode="quant_acc", device=device
+        model, test_inputs, test_inputs, "quant_acc", out_dir, device=device
     )
 
-    assert snr > SNR_THRESH, f"{snr=} < {SNR_THRESH}"  # type: ignore
+    assert snr > SNR_THRESH_NONLINEAR, f"{snr=} < {SNR_THRESH_NONLINEAR}"  # type: ignore

@@ -34,8 +34,9 @@ def test_unify_relu(
     run_quantizer_test(
         model,
         example_inputs,
-        out_dir,
-        expected_nodes=expected_nodes,
+        example_inputs,
         test_mode="unify_pass",
+        out_dir=out_dir,
+        expected_nodes=expected_nodes,
         device=device,
     )

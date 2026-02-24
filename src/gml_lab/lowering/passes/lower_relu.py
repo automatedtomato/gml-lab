@@ -18,28 +18,22 @@ def lower_relu(gm: GraphModule) -> None:
     """Find `DQ -> ReLu -> Q` pattern and convert to custom kernel module."""
     logger = get_logger("lower_pass")
 
-    relus = [torch.nn.functional.relu, torch.relu]
     cnt = 0
     graph = gm.graph
 
     for node in graph.nodes:
         if not is_per_tensor_quant_node(node):
             continue
+
         target_node = node.args[0]
-        is_target_valid = False
-        if (target_node.op == "call_function" and target_node.target in relus) or (
-            target_node.op == "call_method" and target_node.target == "relu"
-        ):
-            is_target_valid = True
-        elif target_node.op == "call_module":
-            submodule = gm.get_submodule(target_node.target)
-            if isinstance(submodule, torch.nn.ReLU):
-                is_target_valid = True
-
-        if not is_target_valid:
+        if target_node.op != "call_module":
             continue
-        dq_node = target_node.args[0]
 
+        submodule = gm.get_submodule(target_node.target)
+        if not isinstance(submodule, torch.nn.ReLU):
+            continue
+
+        dq_node = target_node.args[0]
         if not is_dequant_node(dq_node):
             continue
 
@@ -56,8 +50,8 @@ def lower_relu(gm: GraphModule) -> None:
         graph.erase_node(target_node)
         graph.erase_node(dq_node)
         logger.info(
-            f' The function/method "{target_node.name}" is replaced with '
-            f'the new module "{new_node.name}"'
+            f' The ReLU module "{target_node.name}" is replaced with '
+            f'the new quant module "{new_node.name}"'
         )
         cnt += 1
     gm.graph.lint()
