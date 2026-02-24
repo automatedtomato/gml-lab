@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Write(internal/docs/review/**)"
+    ],
+    "deny": []
+  }
+}

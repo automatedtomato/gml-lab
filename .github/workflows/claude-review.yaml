@@ -1,0 +1,69 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
+      - develop-lab
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run Review
+        id: review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          git diff ${{ github.event.pull_request.base.sha }} ${{ github.sha }} > /tmp/diff.txt
+
+          cat > /tmp/prompt.txt <<'PROMPT'
+          Review the following diff based on CLAUDE.md format.
+          Do NOT edit any source files. Return only the review text.
+          PROMPT
+          cat /tmp/diff.txt >> /tmp/prompt.txt
+
+          claude --print --model claude-sonnet-4-6 < /tmp/prompt.txt > /tmp/review.txt
+
+          mkdir -p internal/docs/review
+          DATE=$(date +%Y-%m-%d)
+          HASH=$(echo ${{ github.sha }} | cut -c1-7)
+          cp /tmp/review.txt internal/docs/review/${DATE}_${HASH}.md
+
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "result<<$EOF" >> $GITHUB_OUTPUT
+          cat /tmp/review.txt >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+      - name: Post PR comment
+        id: comment
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVIEW_BODY: ${{ steps.review.outputs.result }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body "$REVIEW_BODY"
+
+      - name: Upload review as artifact (fallback)
+        if: steps.comment.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-review-${{ github.sha }}
+          path: internal/docs/review/
