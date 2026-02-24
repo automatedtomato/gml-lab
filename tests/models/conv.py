@@ -67,7 +67,6 @@ class ConvReLUMod(ConvModule):
         return self.relu(super().forward(x))
 
 
-
 class ConvBNReLUMod(ConvBN):
     def __init__(
         self,

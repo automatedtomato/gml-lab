@@ -28,6 +28,7 @@ default_int8_config = DTypeConfig(
 
 __all__ = ["get_gml_backend_config"]
 
+
 def fuse_conv_relu(is_qat: bool, conv: nn.Module, relu: nn.Module) -> nn.Module:  # noqa: ARG001, FBT001
     return nni.ConvReLU2d(conv, relu)
 

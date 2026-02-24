@@ -38,6 +38,7 @@ def get_gml_qconfig_mapping(method: str = "per_tensor") -> QConfigMapping:
     return QConfigMapping().set_global(qconfig)
 
 
+# NOTE: No longer used this function
 def build_qconfig_mapping(backend: str = "fbgemm") -> QConfigMapping:
     """Build quantization config mapping.
 
