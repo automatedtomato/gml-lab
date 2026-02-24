@@ -7,6 +7,10 @@ on:
       - main
       - develop-lab
 
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -28,24 +32,24 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          run: |
-          DIFF=$(git diff ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
-          REVIEW=$(claude --model claude-sonnet-4-6 --print "
+          git diff ${{ github.event.pull_request.base.sha }} ${{ github.sha }} > /tmp/diff.txt
+
+          claude --print "
           Review the following diff based on CLAUDE.md format.
           Do NOT edit any source files. Return only the review text.
 
-          $DIFF
-          ")
-
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "result<<$EOF" >> $GITHUB_OUTPUT
-          echo "$REVIEW" >> $GITHUB_OUTPUT
-          echo "$EOF" >> $GITHUB_OUTPUT
+          $(cat /tmp/diff.txt)
+          " --model claude-sonnet-4-6 > /tmp/review.txt
 
           mkdir -p internal/docs/review
           DATE=$(date +%Y-%m-%d)
           HASH=$(echo ${{ github.sha }} | cut -c1-7)
-          echo "$REVIEW" > internal/docs/review/${DATE}_${HASH}.md
+          cp /tmp/review.txt internal/docs/review/${DATE}_${HASH}.md
+
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "result<<$EOF" >> $GITHUB_OUTPUT
+          cat /tmp/review.txt >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
 
       - name: Post PR comment
         id: comment
@@ -60,4 +64,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: claude-review-${{ github.sha }}
-          path: internal/doc/review/
+          path: internal/docs/review/
