@@ -1,0 +1,59 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
+      - develop-lab
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run Review
+        id: review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          DIFF=$(git diff ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
+          REVIEW=$(claude --model claude-sonnet-4-6 "
+          Review the following diff based on CLAUDE.md format.
+          Do NOT edit any source files. Return only the review text.
+
+          $DIFF
+          ")
+          echo "result=$REVIEW" >> $GITHUB_OUTPUT
+
+          # Save to file regardless (used as artifact fallback)
+          mkdir -p internal/docs/review
+          DATE=$(date +%Y-%m-%d)
+          HASH=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "$REVIEW" > internal/docs/review/${DATE}_${HASH}.md
+
+      - name: Post PR comment
+        id: comment
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body "${{ steps.review.outputs.result }}"
+
+      - name: Upload review as artifact (fallback)
+        if: steps.comment.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-review-${{ github.sha }}
+          path: internal/doc/review/
