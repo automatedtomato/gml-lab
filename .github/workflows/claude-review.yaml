@@ -28,6 +28,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          set -x
           DIFF=$(git diff ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
           REVIEW=$(claude --model claude-sonnet-4-6 "
           Review the following diff based on CLAUDE.md format.
