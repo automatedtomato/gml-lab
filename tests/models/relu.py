@@ -13,15 +13,24 @@ class ReLUModule(nn.Module):
 
 
 class ReLUFunc1(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return F.relu(x)
 
 
 class ReLUFunc2(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.relu(x)
 
 
 class ReLUMethod(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x.relu()

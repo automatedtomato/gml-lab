@@ -115,7 +115,6 @@ def check_graph_structure(gm: GraphModule, expected_nodes: list[NodeInfo]) -> No
         expected_node_info = expected_nodes_cp.pop(0)
         assert node_info == expected_node_info, (
             "NodeInfos are defferent:"
-            f"  target structure: {target_nodes_info}\n"
             f"  target node: (op={node.op}, target= "
             f"{type(modules[node.target]) if node.op == 'call_module' else node.target})\n"  # noqa: E501
             f"  expected node: (op={expected_node_info.op}, target= )"

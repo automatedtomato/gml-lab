@@ -46,12 +46,12 @@ def get_node_info(node: Node, modules: dict[str, Module]) -> NodeInfo | None:
     if node.op in ["placeholder", "output", "get_attr"]:
         node_info = None
     elif node.op == "call_module":
-        target_cls = type(modules[node.target])
-        node_info = NodeInfo.call_module(target_cls)
+        target_cls = type(modules[node.target])  # type: ignore
+        node_info = NodeInfo.call_module(target_cls)  # type: ignore
     elif node.op == "call_function":
-        node_info = NodeInfo.call_function(node.target)
+        node_info = NodeInfo.call_function(node.target)  # type: ignore
     elif node.op == "call_method":
-        node_info = NodeInfo.call_method(node.target)
+        node_info = NodeInfo.call_method(node.target)  # type: ignore
     else:
         msg = f"Node type {node.op} is not supported."
         raise TypeError(msg)
