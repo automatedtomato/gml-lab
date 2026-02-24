@@ -130,7 +130,7 @@ def check_graph_structure(gm: GraphModule, expected_nodes: list[NodeInfo]) -> No
 def quantize_model(
     float_model: Module,
     test_inputs: tuple[torch.Tensor, ...],
-    calib_input: torch.Tensor,
+    calib_inputs: tuple[torch.Tensor, ...],
     method: str = "per_tensor",
     device: str = "cpu",
 ) -> tuple[GraphModule, ...]:
@@ -140,6 +140,7 @@ def quantize_model(
     qconfig_mapping = get_gml_qconfig_mapping(method)
 
     test_inputs = tuple(i.to(device) for i in test_inputs)
+    calib_inputs = tuple(i.to(device) for i in test_inputs)
 
     prepared_model = gml_prepare_fx(
         float_model, test_inputs, qconfig_mapping, backend_config
@@ -147,7 +148,7 @@ def quantize_model(
 
     prepared_model.eval().to(device)
     with torch.no_grad():
-        _ = prepared_model(calib_input)
+        _ = prepared_model(*calib_inputs)
 
     qdq_model = gml_convert_fx(prepared_model, qconfig_mapping, backend_config)
 
@@ -157,7 +158,7 @@ def quantize_model(
 def run_quantizer_test(
     float_model: Module,
     example_inputs: tuple[torch.Tensor, ...],
-    calib_inputs: tuple[torch.Tensor],
+    calib_inputs: tuple[torch.Tensor, ...],
     test_mode: Literal["unify_pass", "quant_acc", "lower_acc"],
     out_dir: Path | None = None,
     expected_nodes: list[NodeInfo] | None = None,
@@ -168,12 +169,14 @@ def run_quantizer_test(
     logger = get_logger("run_quantizer_test")
     float_model.eval()
     example_inputs = tuple(i.to(device) for i in example_inputs)
+    calib_inputs = tuple(i.to(device) for i in calib_inputs)
+
     if out_dir is not None:
         out_dir.mkdir(parents=True, exist_ok=True)
     float_model = float_model.to(device)
 
     prepared_model, qdq_model = quantize_model(
-        float_model, example_inputs, *calib_inputs, device=device
+        float_model, example_inputs, calib_inputs, device=device
     )
 
     if test_mode == "unify_pass" and expected_nodes is not None:

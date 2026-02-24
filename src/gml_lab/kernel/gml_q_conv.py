@@ -37,7 +37,7 @@ class GMLQuantConvBase(torch.nn.Module):
             "output_scale", torch.tensor(out_scale, dtype=torch.float32)
         )
         self.register_buffer("output_zp", torch.tensor(out_zp, dtype=torch.int32))
-        self.weght = torch.nn.Parameter(conv_module.weight.detach().clone())
+        self.weight = torch.nn.Parameter(conv_module.weight.detach().clone())
         if conv_module.bias is not None:
             self.bias = torch.nn.Parameter(conv_module.bias.detach().clone())
         else:
@@ -56,14 +56,17 @@ class GMLQuantConvBase(torch.nn.Module):
             self.bias,
             self.stride,
             self.padding,
-            self.dialtion,
+            self.dilation,
             self.groups,
         )
         if has_relu:
             out = torch.nn.functional.relu(out)
 
-        return torch._make_per_tensor_quantized_tensor(
-            out, scale=self.output_scale.item(), zero_point=self.output_zp.itme()
+        return torch.quantize_per_tensor(
+            out,
+            scale=self.output_scale.item(),
+            zero_point=self.output_zp.item(),
+            dtype=torch.qint8,
         )
 
 
@@ -71,7 +74,7 @@ class GMLQuantConv(GMLQuantConvBase):
     """Quantized Conv2d."""
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Run kernel simuated forward pass."""
+        """Run kernel simulated forward pass."""
         return self._inner_forward(x, has_relu=False)
 
 
@@ -79,5 +82,5 @@ class GMLQuantConvReLU(GMLQuantConvBase):
     """Quantized ConvReLU2d."""
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Run kernel simuated forward pass."""
+        """Run kernel simulated forward pass."""
         return self._inner_forward(x, has_relu=True)
