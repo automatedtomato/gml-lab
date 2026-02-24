@@ -28,17 +28,20 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          set -x
+          run: |
           DIFF=$(git diff ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
-          REVIEW=$(claude --model claude-sonnet-4-6 "
+          REVIEW=$(claude --model claude-sonnet-4-6 --print "
           Review the following diff based on CLAUDE.md format.
           Do NOT edit any source files. Return only the review text.
 
           $DIFF
           ")
-          echo "result=$REVIEW" >> $GITHUB_OUTPUT
 
-          # Save to file regardless (used as artifact fallback)
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "result<<$EOF" >> $GITHUB_OUTPUT
+          echo "$REVIEW" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
           mkdir -p internal/docs/review
           DATE=$(date +%Y-%m-%d)
           HASH=$(echo ${{ github.sha }} | cut -c1-7)
