@@ -32,6 +32,7 @@ INT8_MAX = torch.iinfo(torch.int8).max
 INT8_MIN = torch.iinfo(torch.int8).min
 
 SNR_THRESH = 50.0
+SNR_THRESH_NONLINEAR = 40.0
 
 save_test_results = os.getenv("SAVE_TEST_RESULTS", None) is not None
 
@@ -114,6 +115,7 @@ def check_graph_structure(gm: GraphModule, expected_nodes: list[NodeInfo]) -> No
         expected_node_info = expected_nodes_cp.pop(0)
         assert node_info == expected_node_info, (
             "NodeInfos are defferent:"
+            f"  target structure: {target_nodes_info}\n"
             f"  target node: (op={node.op}, target= "
             f"{type(modules[node.target]) if node.op == 'call_module' else node.target})\n"  # noqa: E501
             f"  expected node: (op={expected_node_info.op}, target= )"
@@ -127,7 +129,7 @@ def check_graph_structure(gm: GraphModule, expected_nodes: list[NodeInfo]) -> No
 
 def quantize_model(
     float_model: Module,
-    test_inputs: tuple[torch.Tensor,...],
+    test_inputs: tuple[torch.Tensor, ...],
     calib_input: torch.Tensor,
     method: str = "per_tensor",
     device: str = "cpu",

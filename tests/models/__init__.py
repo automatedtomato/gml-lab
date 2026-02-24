@@ -20,5 +20,5 @@ __all__ = [
     "ReLUFunc1",
     "ReLUFunc2",
     "ReLUMethod",
-    "ReLUModule"
+    "ReLUModule",
 ]

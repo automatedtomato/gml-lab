@@ -9,8 +9,6 @@ from torch.ao.quantization.backend_config import (
     ObservationType,
 )
 
-from .backend_mapping import CONV_BN_MAP, CONV_BN_RELU_MAP, CONV_RELU_MAP
-
 default_int8_config = DTypeConfig(
     input_dtype=torch.qint8,
     output_dtype=torch.qint8,
@@ -20,18 +18,16 @@ default_int8_config = DTypeConfig(
 
 __all__ = ["get_gml_backend_config"]
 
+
 def fuse_conv_relu(is_qat: bool, conv: nn.Module, relu: nn.Module) -> nn.Module:  # noqa: ARG001, FBT001
     return nni.ConvReLU2d(conv, relu)
 
 
 def _get_default_backend_configs() -> list[BackendPatternConfig]:
     default_ops = [
-        # ReLU
         nn.ReLU,
-        nn.functional.relu,
-        torch.relu,
-        "relu",
         nn.Conv2d,
+        nni.ConvReLU2d,
     ]
     default_configs: list[BackendPatternConfig] = []
     for op in default_ops:
@@ -48,33 +44,30 @@ def _get_default_backend_configs() -> list[BackendPatternConfig]:
 def _get_fused_conv_backend_configs() -> list[BackendPatternConfig]:
     observation_type = ObservationType.OUTPUT_USE_DIFFERENT_OBSERVER_AS_INPUT
     fused_conv_configs: list[BackendPatternConfig] = []
+
     # Conv + BN + ReLU
-    for m in CONV_BN_RELU_MAP:
-        fused_conv_configs.append(  # noqa: PERF401
-            BackendPatternConfig(m)
-            .set_observation_type(observation_type)
-            .set_dtype_configs([default_int8_config])
-            .set_fuser_method(fuser_mappings.fuse_conv_bn_relu)
-            .set_fused_module(nni.ConvBnReLU2d)
-        )
+    fused_conv_configs.append(
+        BackendPatternConfig((nn.Conv2d, nn.BatchNorm2d, nn.ReLU))
+        .set_observation_type(observation_type)
+        .set_dtype_configs([default_int8_config])
+        .set_fuser_method(fuser_mappings.fuse_conv_bn_relu)
+        .set_fused_module(nni.ConvReLU2d)
+    )
     # Conv + BN
-    for m in CONV_BN_MAP:
-        fused_conv_configs.append(  # noqa: PERF401
-            BackendPatternConfig(m)
-            .set_observation_type(observation_type)
-            .set_dtype_configs([default_int8_config])
-            .set_fuser_method(fuser_mappings.fuse_conv_bn)
-            # .set_fused_module(nni.ConvBn2d)
-        )
+    fused_conv_configs.append(
+        BackendPatternConfig((nn.Conv2d, nn.BatchNorm2d))
+        .set_observation_type(observation_type)
+        .set_dtype_configs([default_int8_config])
+        .set_fuser_method(fuser_mappings.fuse_conv_bn)
+    )
     # Conv + ReLU
-    for m in CONV_RELU_MAP:
-        fused_conv_configs.append(
-            BackendPatternConfig(m)
-            .set_observation_type(observation_type)
-            .set_dtype_configs([default_int8_config])
-            .set_fuser_method(fuse_conv_relu)
-            .set_fused_module(nni.ConvReLU2d)
-        )
+    fused_conv_configs.append(
+        BackendPatternConfig((nn.Conv2d, nn.ReLU))
+        .set_observation_type(observation_type)
+        .set_dtype_configs([default_int8_config])
+        .set_fuser_method(fuse_conv_relu)
+        .set_fused_module(nni.ConvReLU2d)
+    )
     return fused_conv_configs
 
 
