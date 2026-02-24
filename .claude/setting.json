@@ -4,8 +4,6 @@
       "Read(*)",
       "Write(internal/docs/review/**)"
     ],
-    "deny": [
-      "Write(*)"
-    ]
+    "deny": []
   }
 }

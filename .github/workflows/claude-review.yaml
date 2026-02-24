@@ -34,12 +34,13 @@ jobs:
         run: |
           git diff ${{ github.event.pull_request.base.sha }} ${{ github.sha }} > /tmp/diff.txt
 
-          claude --print "
+          cat > /tmp/prompt.txt <<'PROMPT'
           Review the following diff based on CLAUDE.md format.
           Do NOT edit any source files. Return only the review text.
+          PROMPT
+          cat /tmp/diff.txt >> /tmp/prompt.txt
 
-          $(cat /tmp/diff.txt)
-          " --model claude-sonnet-4-6 > /tmp/review.txt
+          claude --print --model claude-sonnet-4-6 < /tmp/prompt.txt > /tmp/review.txt
 
           mkdir -p internal/docs/review
           DATE=$(date +%Y-%m-%d)
@@ -56,8 +57,9 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVIEW_BODY: ${{ steps.review.outputs.result }}
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} --body "${{ steps.review.outputs.result }}"
+          gh pr comment ${{ github.event.pull_request.number }} --body "$REVIEW_BODY"
 
       - name: Upload review as artifact (fallback)
         if: steps.comment.outcome == 'failure'
