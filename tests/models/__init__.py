@@ -14,9 +14,13 @@ __all__ = [
     "LinearModule",
     
     "ConvBN",
-    "ConvReLU",
     "ConvBNReLU",
+    "ConvBNReLUFunc",
+    "ConvBNReLUMod",
     "ConvModule",
+    "ConvReLU",
+    "ConvReLUFunc",
+    "ConvReLUMod",
     "ReLUFunc1",
    
     "ReLUFunc2",
