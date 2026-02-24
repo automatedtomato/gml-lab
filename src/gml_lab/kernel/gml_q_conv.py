@@ -47,6 +47,22 @@ class GMLQuantConvBase(torch.nn.Module):
         self.groups = conv_module.groups
         self.dilation = conv_module.dilation
 
+        if conv_module.weight.is_quantized:
+            weight_scale = conv_module.weight.q_scale()
+            weight_zp = conv_module.weight.q_zero_point()
+            self.weight = torch.nn.Parameter(
+                conv_module.weight.int_repr().detach().clone()
+            )
+        else:
+            weight_scale = 1.0
+            weight_zp = 0
+            self.weight = torch.nn.Parameter(conv_module.weight.detach().clone())
+
+        self.register_buffer(
+            "weight_scale", torch.tensor(weight_scale, dtype=torch.float32)
+        )
+        self.register_buffer("weight_zp", torch.tensor(weight_zp, dtype=torch.int32))
+
     def _inner_forward(self, x: torch.Tensor, has_relu: bool) -> torch.Tensor:  # noqa: FBT001
         """Simulate kernel forward pass."""
         x = x.dequantize()
