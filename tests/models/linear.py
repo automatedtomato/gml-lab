@@ -31,4 +31,3 @@ class LinearBN(LinearModule):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.bn(super().forward(x))
-

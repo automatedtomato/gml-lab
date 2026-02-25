@@ -34,7 +34,7 @@ def test_unify_linear(
     torch.manual_seed(seed)
     out_dir = get_test_output_dir(request.node.name, __file__)
 
-    model = model(in_features=input_shape[-1], out_features=10, bias=bias)
+    model = model(in_features=input_shape[-1], out_features=input_shape[1], bias=bias)
     example_inputs = (torch.randn(input_shape),)
 
     expected_nodes = [
