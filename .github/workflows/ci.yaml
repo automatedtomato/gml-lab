@@ -1,0 +1,118 @@
+name: Linter & Fast Tests on PR
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          uv venv --allow-existing
+          uv pip install openmim
+          sed '/torch/d' docker/install/requirements.txt > requirements_ci.txt
+          uv pip install -r requirements_ci.txt
+          uv pip install torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cpu
+          uv run mim install "mmcv==2.1.0"
+          uv pip install --no-deps -e .
+
+      - name: Linter
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+  test:
+    name: Fast Tests
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          uv venv --allow-existing
+          uv pip install openmim
+          sed '/torch/d' docker/install/requirements.txt > requirements_ci.txt
+          uv pip install -r requirements_ci.txt
+          uv pip install torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cpu
+          uv run mim install "mmcv==2.1.0"
+          uv pip install --no-deps -e .
+
+      - name: Run light tests
+        run: uv run pytest -m "not gpu and not heavy"
+
+  claude-review:
+    name: Claude Code Review
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run Review
+        id: review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          git diff ${{ github.event.pull_request.base.sha }} ${{ github.sha }} > /tmp/diff.txt
+
+          cat > /tmp/prompt.txt <<'PROMPT'
+          Review the following diff based on CLAUDE.md format.
+          Do NOT edit any source files. Return only the review text.
+          PROMPT
+          cat /tmp/diff.txt >> /tmp/prompt.txt
+
+          claude --print --model claude-sonnet-4-6 < /tmp/prompt.txt > /tmp/review.txt
+
+          mkdir -p internal/docs/review
+          DATE=$(date +%Y-%m-%d)
+          HASH=$(echo ${{ github.sha }} | cut -c1-7)
+          cp /tmp/review.txt internal/docs/review/${DATE}_${HASH}.md
+
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "result<<$EOF" >> $GITHUB_OUTPUT
+          cat /tmp/review.txt >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+      - name: Post PR comment
+        id: comment
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVIEW_BODY: ${{ steps.review.outputs.result }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body "$REVIEW_BODY"
+
+      - name: Upload review as artifact (fallback)
+        if: steps.comment.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-review-${{ github.sha }}
+          path: internal/docs/review/
