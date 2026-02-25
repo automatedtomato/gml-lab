@@ -40,8 +40,8 @@ def lower_add(gm: GraphModule) -> None:
 
         kwargs = {
             "in_scale_a": a_qparams["scale"],
-            "in_za": b_qparams["zero_point"],
-            "in_scale_b": a_qparams["scale"],
+            "in_za": a_qparams["zero_point"],
+            "in_scale_b": b_qparams["scale"],
             "in_zb": b_qparams["zero_point"],
             "out_scale": out_qparams["scale"],
             "out_zp": out_qparams["zero_point"],

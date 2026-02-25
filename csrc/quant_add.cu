@@ -1,4 +1,4 @@
-# include "kernel.hpp"
+#include "kernel.hpp"
 #include <cmath>
 #include <algorithm>
 
@@ -14,7 +14,7 @@
  * @param requant_scale_a input(a) scale for requantization (float)
  * @param requant_scale_a input(b) scale for requantization (float)
  * @param lower_bound lower clip bound (int8_t)
- * @param lower_bound upper clip bound (int8_t)
+ * @param upper_bound upper clip bound (int8_t)
  * @param size (int)
  */
 

@@ -7,15 +7,16 @@ import torch
 from src.gml_lab.logger import get_logger
 
 logger = get_logger("gml_q_relu")
-enable_custom_ops = os.getenv("ENABLE_CUSTOMOPS", "1") not in ["0", False]
-
-if not enable_custom_ops:
-    custom_ops = None
 
 try:
     import gml_lab_custom_ops as custom_ops
 except ImportError as e:
     logger.error(f"Error importing custom_ops: {e}")
+    custom_ops = None
+
+enable_custom_ops = os.getenv("ENABLE_CUSTOMOPS", "1") not in ["0", False]
+
+if not enable_custom_ops:
     custom_ops = None
 
 
@@ -94,7 +95,7 @@ class GMLQuantAddBase(torch.nn.Module):
 
 
 class GMLQuantAdd(GMLQuantAddBase):
-    """Quantized AddReLU."""
+    """Quantized Add."""
 
     def forward(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
         """Run kernel simulated forward pass."""

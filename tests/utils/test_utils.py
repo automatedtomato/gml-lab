@@ -140,7 +140,7 @@ def quantize_model(
     qconfig_mapping = get_gml_qconfig_mapping(method)
 
     test_inputs = tuple(i.to(device) for i in test_inputs)
-    calib_inputs = tuple(i.to(device) for i in test_inputs)
+    calib_inputs = tuple(i.to(device) for i in calib_inputs)
 
     prepared_model = gml_prepare_fx(
         float_model, test_inputs, qconfig_mapping, backend_config

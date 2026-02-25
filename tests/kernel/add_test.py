@@ -10,7 +10,7 @@ from src.gml_lab.kernel import GMLQuantAdd, GMLQuantAddReLU
 from tests.models import AddFunc, AddReLU, IncrementalAdd
 from tests.utils.test_utils import (
     NO_GPU,
-    SNR_THRESH_ELTWISE,
+    SNR_THRESH_NONLINEAR,
     NodeInfo,
     get_test_output_dir,
     run_quantizer_test,
@@ -53,7 +53,7 @@ def test_relu(
         NodeInfo.call_method("dequantize"),
     ]
 
-    example_inputs = (torch.randn(input_shape), torch.randn(input_shape))
+    example_inputs = (torch.randn(input_shape), torch.randn(input_shape) * 2 - 1)
     model = model()
     snr = run_quantizer_test(
         float_model=model,
@@ -65,4 +65,4 @@ def test_relu(
         device=device,
     )
 
-    assert snr > SNR_THRESH_ELTWISE, f"{snr=} < {SNR_THRESH_ELTWISE}"  # type: ignore
+    assert snr > SNR_THRESH_NONLINEAR, f"{snr=} < {SNR_THRESH_NONLINEAR}"  # type: ignore

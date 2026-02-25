@@ -7,15 +7,16 @@ import torch
 from src.gml_lab.logger import get_logger
 
 logger = get_logger("gml_q_relu")
-enable_custom_ops = os.getenv("ENABLE_CUSTOMOPS", "1") not in ["0", False]
-
-if not enable_custom_ops:
-    custom_ops = None
 
 try:
     import gml_lab_custom_ops as custom_ops
 except ImportError as e:
     logger.error(f"Error importing custom_ops: {e}")
+    custom_ops = None
+
+enable_custom_ops = os.getenv("ENABLE_CUSTOMOPS", "1") not in ["0", False]
+
+if not enable_custom_ops:
     custom_ops = None
 
 
@@ -38,7 +39,7 @@ class GMLQuantReLU(torch.nn.Module):
             x = x.dequantize()
             out = torch.clamp(x, min=zp)
             return torch.quantize_per_tensor(
-                x,
+                out,
                 scale=self.scale.item(),
                 zero_point=zp,
                 dtype=torch.qint8,

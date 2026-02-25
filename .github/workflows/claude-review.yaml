@@ -1,23 +1,20 @@
 name: Claude Code Review
 
 on:
-  pull_request:
-    types: [opened, synchronize]
-    branches:
-      - main
-      - develop-lab
-
-permissions:
-  pull-requests: write
-  contents: read
+  workflow_run:
+    workflows: ["Linter & Fast Tests on PR"]
+    types:
+      - completed
 
 jobs:
   review:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -32,7 +29,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          git diff ${{ github.event.pull_request.base.sha }} ${{ github.sha }} > /tmp/diff.txt
+          git diff ${{ github.event.workflow_run.head_sha }}^1 ${{ github.event.workflow_run.head_sha }} > /tmp/diff.txt
 
           cat > /tmp/prompt.txt <<'PROMPT'
           Review the following diff based on CLAUDE.md format.
@@ -44,7 +41,7 @@ jobs:
 
           mkdir -p internal/docs/review
           DATE=$(date +%Y-%m-%d)
-          HASH=$(echo ${{ github.sha }} | cut -c1-7)
+          HASH=$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)
           cp /tmp/review.txt internal/docs/review/${DATE}_${HASH}.md
 
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
@@ -59,11 +56,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REVIEW_BODY: ${{ steps.review.outputs.result }}
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} --body "$REVIEW_BODY"
+          PR_NUMBER=$(gh pr list --head ${{ github.event.workflow_run.head_branch }} --json number --jq '.[0].number')
+          gh pr comment $PR_NUMBER --body "$REVIEW_BODY"
 
       - name: Upload review as artifact (fallback)
         if: steps.comment.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
-          name: claude-review-${{ github.sha }}
+          name: claude-review-${{ github.event.workflow_run.head_sha }}
           path: internal/docs/review/

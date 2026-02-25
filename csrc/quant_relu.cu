@@ -50,4 +50,3 @@ torch::Tensor quant_relu(const torch::Tensor& input, int32_t zero_point) {
 
     return output;
 }
-
