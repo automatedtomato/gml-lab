@@ -7,7 +7,7 @@ from tests.models import ReLUFunc1, ReLUFunc2, ReLUMethod, ReLUModule
 from tests.utils.test_utils import INT8_MAX, INT8_MIN
 
 try:
-    from src.gml_lab.kernel import GMLQuantReLU
+    from src.gml_lab.kernel_class import GMLQuantReLU
 except ImportError as e:
     print(f"Error importing GMLQuantReLU: {e}")
     GMLQuantReLU = None

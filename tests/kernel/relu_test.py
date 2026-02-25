@@ -6,7 +6,7 @@ import time
 import pytest
 import torch
 
-from src.gml_lab.kernel import GMLQuantReLU
+from src.gml_lab.kernel_class import GMLQuantReLU
 from tests.models import ReLUFunc1, ReLUMethod, ReLUModule
 from tests.utils.test_utils import (
     NO_GPU,

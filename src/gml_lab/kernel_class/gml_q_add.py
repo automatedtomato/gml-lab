@@ -4,6 +4,7 @@ import os
 
 import torch
 
+from src.gml_lab.kernel_class.gml_quant_base import GMLQuantBinaryOpsBase
 from src.gml_lab.logger import get_logger
 
 logger = get_logger("gml_q_relu")
@@ -20,33 +21,29 @@ if not enable_custom_ops:
     custom_ops = None
 
 
-class GMLQuantAddBase(torch.nn.Module):
+class GMLQuantAddBase(GMLQuantBinaryOpsBase):
     """GML custom quantized Add kernel base class."""
 
     def __init__(
         self,
-        in_scale_a: float,
-        in_za: int,
-        in_scale_b: float,
-        in_zb: int,
-        out_scale: float,
-        out_zp: int,
+        input_scale_a: float,
+        input_za: int,
+        input_scale_b: float,
+        input_zb: int,
+        output_scale: float,
+        output_zp: int,
     ) -> None:
-        super().__init__()
+        super().__init__(output_scale, output_zp)
         self.register_buffer(
-            "input_scale_a", torch.tensor(in_scale_a, dtype=torch.float32)
+            "input_scale_a", torch.tensor(input_scale_a, dtype=torch.float32)
         )
-        self.register_buffer("in_za", torch.tensor(in_za, dtype=torch.int32))
+        self.register_buffer("input_za", torch.tensor(input_za, dtype=torch.int32))
         self.register_buffer(
-            "input_scale_b", torch.tensor(in_scale_b, dtype=torch.float32)
+            "input_scale_b", torch.tensor(input_scale_b, dtype=torch.float32)
         )
-        self.register_buffer("in_zb", torch.tensor(in_zb, dtype=torch.int32))
-        self.register_buffer(
-            "output_scale", torch.tensor(out_scale, dtype=torch.float32)
-        )
-        self.register_buffer("output_zp", torch.tensor(out_zp, dtype=torch.int32))
-        requant_scale_a = in_scale_a / out_scale
-        requant_scale_b = in_scale_b / out_scale
+        self.register_buffer("input_zb", torch.tensor(input_zb, dtype=torch.int32))
+        requant_scale_a = input_scale_a / output_scale
+        requant_scale_b = input_scale_b / output_scale
         self.register_buffer(
             "requant_scale_a", torch.tensor(requant_scale_a, dtype=torch.float32)
         )
@@ -60,7 +57,8 @@ class GMLQuantAddBase(torch.nn.Module):
         b: torch.Tensor,
         has_relu: bool,  # noqa: FBT001
     ) -> torch.Tensor:
-        """Simulate kernel forward pass."""
+        scale = self.output_scale.item()
+        zp = self.output_zp.item()
         if custom_ops is None:
             a_float = a.dequantize()
             b_float = b.dequantize()
@@ -69,8 +67,8 @@ class GMLQuantAddBase(torch.nn.Module):
                 out_float = torch.nn.functional.relu(out_float)
             return torch.quantize_per_tensor(
                 out_float,
-                scale=self.output_scale.item(),
-                zero_point=self.output_zp.item(),
+                scale=scale,
+                zero_point=zp,
                 dtype=torch.qint8,
             )
         a_q = a.int_repr()
@@ -79,9 +77,9 @@ class GMLQuantAddBase(torch.nn.Module):
         out_int8 = custom_ops.quant_add(
             a_q,
             b_q,
-            self.in_za.item(),
-            self.in_zb.item(),
-            self.output_zp.item(),
+            self.input_za.item(),
+            self.input_zb.item(),
+            zp,
             self.requant_scale_a.item(),
             self.requant_scale_b.item(),
             has_relu,
@@ -89,22 +87,16 @@ class GMLQuantAddBase(torch.nn.Module):
 
         return torch._make_per_tensor_quantized_tensor(
             out_int8,
-            scale=self.output_scale.item(),
-            zero_point=self.output_zp.item(),
+            scale=scale,
+            zero_point=zp,
         )
 
 
 class GMLQuantAdd(GMLQuantAddBase):
-    """Quantized Add."""
-
     def forward(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-        """Run kernel simulated forward pass."""
         return self._inner_forward(a, b, has_relu=False)
 
 
 class GMLQuantAddReLU(GMLQuantAddBase):
-    """Quantized AddReLU."""
-
     def forward(self, a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-        """Run kernel simulated forward pass."""
         return self._inner_forward(a, b, has_relu=True)
