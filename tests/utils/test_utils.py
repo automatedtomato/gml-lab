@@ -32,6 +32,8 @@ INT8_MAX = torch.iinfo(torch.int8).max
 INT8_MIN = torch.iinfo(torch.int8).min
 
 SNR_THRESH = 50.0
+SNR_THRESH_NONLINEAR = 40.0
+SNR_THRESH_ELTWISE = 35.0
 
 save_test_results = os.getenv("SAVE_TEST_RESULTS", None) is not None
 
@@ -127,7 +129,8 @@ def check_graph_structure(gm: GraphModule, expected_nodes: list[NodeInfo]) -> No
 
 def quantize_model(
     float_model: Module,
-    example_inputs: tuple[torch.Tensor, ...],
+    test_inputs: tuple[torch.Tensor, ...],
+    calib_inputs: tuple[torch.Tensor, ...],
     method: str = "per_tensor",
     device: str = "cpu",
 ) -> tuple[GraphModule, ...]:
@@ -136,15 +139,16 @@ def quantize_model(
     backend_config = get_gml_backend_config()
     qconfig_mapping = get_gml_qconfig_mapping(method)
 
-    example_inputs = tuple(i.to(device) for i in example_inputs)
+    test_inputs = tuple(i.to(device) for i in test_inputs)
+    calib_inputs = tuple(i.to(device) for i in calib_inputs)
 
     prepared_model = gml_prepare_fx(
-        float_model, example_inputs, qconfig_mapping, backend_config
+        float_model, test_inputs, qconfig_mapping, backend_config
     )
 
     prepared_model.eval().to(device)
     with torch.no_grad():
-        _ = prepared_model(*example_inputs)
+        _ = prepared_model(*calib_inputs)
 
     qdq_model = gml_convert_fx(prepared_model, qconfig_mapping, backend_config)
 
@@ -154,20 +158,25 @@ def quantize_model(
 def run_quantizer_test(
     float_model: Module,
     example_inputs: tuple[torch.Tensor, ...],
+    calib_inputs: tuple[torch.Tensor, ...],
+    test_mode: Literal["unify_pass", "quant_acc", "lower_acc"],
     out_dir: Path | None = None,
     expected_nodes: list[NodeInfo] | None = None,
-    test_mode: Literal["unify_pass", "quant_acc", "lower_acc"] = "unify_pass",
     original_model_traceable: bool = True,  # noqa: FBT001, FBT002
     device: str = "cpu",
 ) -> float | None:
     """Run quantizer test suite."""
     logger = get_logger("run_quantizer_test")
+    float_model.eval()
     example_inputs = tuple(i.to(device) for i in example_inputs)
+    calib_inputs = tuple(i.to(device) for i in calib_inputs)
+
     if out_dir is not None:
         out_dir.mkdir(parents=True, exist_ok=True)
+    float_model = float_model.to(device)
 
     prepared_model, qdq_model = quantize_model(
-        float_model, example_inputs, device=device
+        float_model, example_inputs, calib_inputs, device=device
     )
 
     if test_mode == "unify_pass" and expected_nodes is not None:

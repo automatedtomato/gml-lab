@@ -25,7 +25,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 model = SimpleModel()
 float_model = torch.fx.symbolic_trace(model)
 example_inputs = (torch.randn(1, 3, 28, 28, dtype=torch.float32),)
-_, qdq_model = quantize_model(model, example_inputs)
+_, qdq_model = quantize_model(model, example_inputs, example_inputs)
 
 
 seeds = [int(os.getenv("SET_SEED", time.time_ns()))]
