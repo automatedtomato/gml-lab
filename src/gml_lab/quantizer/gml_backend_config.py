@@ -1,4 +1,5 @@
 import torch
+import torch.ao.quantization.fuser_method_mappings as fuser_mappings
 from torch import nn
 from torch.ao.quantization.backend_config import (
     BackendConfig,
@@ -28,6 +29,7 @@ def _get_default_backend_configs() -> list[BackendPatternConfig]:
         nn.ReLU,
         cnn.Add,
         fcnn.AddReLU,
+        nn.Linear,
     ]
     default_configs: list[BackendPatternConfig] = []
     for op in default_ops:
@@ -41,10 +43,23 @@ def _get_default_backend_configs() -> list[BackendPatternConfig]:
     return default_configs
 
 
+def _get_linear_backend_configs() -> list[BackendPatternConfig]:
+    linear_configs: list[BackendPatternConfig] = []
+    linear_configs.append(
+        BackendPatternConfig((nn.Linear, nn.BatchNorm1d))
+        .set_observation_type(ObservationType.OUTPUT_SHARE_OBSERVER_WITH_INPUT)
+        .set_dtype_configs([default_int8_config])
+        .set_fuser_method(fuser_mappings.fuse_linear_bn)
+    )
+    return linear_configs
+
+
 def get_gml_backend_config() -> BackendConfig:
     """Get GML Lab custom backend config."""
-    return BackendConfig("gml_lab").set_backend_pattern_configs(
-        _get_default_backend_configs()
+    return (
+        BackendConfig("gml_lab")
+        .set_backend_pattern_configs(_get_default_backend_configs())
+        .set_backend_pattern_configs(_get_linear_backend_configs())
     )
 
 

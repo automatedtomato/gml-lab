@@ -7,7 +7,12 @@ import torch
 from torch.ao.quantization.quantize_fx import prepare_fx
 
 from src.gml_lab.quantizer.gml_backend_config import get_prepare_custom_config
-from src.gml_lab.quantizer.passes import fuse_add_relu, unify_add, unify_relu
+from src.gml_lab.quantizer.passes import (
+    fuse_add_relu,
+    unify_add,
+    unify_linear,
+    unify_relu,
+)
 
 if TYPE_CHECKING:
     from torch.ao.quantization.backend_config import BackendConfig
@@ -46,6 +51,7 @@ def gml_prepare_fx(
 
     unify_add(gm)
     unify_relu(gm)
+    unify_linear(gm)
 
     fused_model = _gml_fuse_fx(gm)
 
