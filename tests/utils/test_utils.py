@@ -33,6 +33,7 @@ INT8_MIN = torch.iinfo(torch.int8).min
 
 SNR_THRESH = 50.0
 SNR_THRESH_NONLINEAR = 40.0
+SNR_THRESH_ELTWISE = 35.0
 
 save_test_results = os.getenv("SAVE_TEST_RESULTS", None) is not None
 

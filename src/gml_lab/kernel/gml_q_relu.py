@@ -33,12 +33,19 @@ class GMLQuantReLU(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Run kernel simuated forward pass."""
-        x_q = x.int_repr()
         zp = self.zero_point.item()
         if custom_ops is None:
-            out = torch.clamp(x_q, min=zp)
-        else:
-            out = custom_ops.quant_relu(x_q, zp)
+            x = x.dequantize()
+            out = torch.clamp(x, min=zp)
+            return torch.quantize_per_tensor(
+                x,
+                scale=self.scale.item(),
+                zero_point=zp,
+                dtype=torch.qint8,
+            )
+
+        x = x.int_repr()
+        out = custom_ops.quant_relu(x, zp)
 
         return torch._make_per_tensor_quantized_tensor(
             out, scale=self.scale.item(), zero_point=zp

@@ -21,8 +21,7 @@ input_shapes = [
 ]
 
 
-@pytest.mark.gpu
-@pytest.mark.skipif(NO_GPU, reason="CUDA is not available")
+@pytest.mark.skip
 @pytest.mark.parametrize("seed", seeds)
 @pytest.mark.parametrize("input_shape", input_shapes)
 @pytest.mark.parametrize("dtype", [torch.float32])

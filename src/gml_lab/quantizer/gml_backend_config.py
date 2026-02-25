@@ -6,7 +6,10 @@ from torch.ao.quantization.backend_config import (
     DTypeConfig,
     ObservationType,
 )
-from torch.ao.quantization.fx.custom_config import PrepareCustomConfig
+from torch.ao.quantization.fx.custom_config import (
+    ConvertCustomConfig,
+    PrepareCustomConfig,
+)
 
 import src.gml_lab.nn.fused_modules as fcnn
 import src.gml_lab.nn.modules as cnn
@@ -54,3 +57,13 @@ def get_prepare_custom_config() -> PrepareCustomConfig:
     """
     non_traceable_modules = [cnn.Add, fcnn.AddReLU]
     return PrepareCustomConfig().set_non_traceable_module_classes(non_traceable_modules)
+
+
+def get_convert_custom_config() -> PrepareCustomConfig:
+    """Get PrepareCustomConfig.
+
+    Some modules should not be traced during process in prepare_fx.
+    Specify the modules in this function.
+    """
+    non_traceable_modules = [cnn.Add, fcnn.AddReLU]
+    return ConvertCustomConfig().preserved_attributes(non_traceable_modules)

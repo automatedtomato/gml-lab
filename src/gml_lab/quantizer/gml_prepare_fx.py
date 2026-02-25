@@ -46,8 +46,6 @@ def gml_prepare_fx(
 
     unify_add(gm)
     unify_relu(gm)
-    print(gm)
-    gm.graph.print_tabular()
 
     fused_model = _gml_fuse_fx(gm)
 

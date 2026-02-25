@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from torch import nn
+
 import src.gml_lab.nn.fused_modules as fcnn
+import src.gml_lab.nn.modules as cnn
 from src.gml_lab.logger import get_logger
 
 if TYPE_CHECKING:
@@ -17,13 +20,17 @@ def fuse_add_relu(gm: GraphModule) -> None:
     new_module = None
 
     for node in graph.nodes:
-        if node.op != "call_module" or not node.target.startswith("unified_add_"):
+        if node.op != "call_module":
+            continue
+        submodule = gm.get_submodule(node.target)
+        if not isinstance(submodule, cnn.Add):
             continue
         users = list(node.users.keys())
         next_node = users[0]
-        if next_node.op != "call_module" or not next_node.target.startswith(
-            "unified_relu_"
-        ):
+        if next_node.op != "call_module":
+            continue
+        next_submodule = gm.get_submodule(next_node.target)
+        if not isinstance(next_submodule, nn.ReLU):
             continue
         new_module = fcnn.AddReLU()
         new_name = graph._graph_namespace.create_name(f"fused_add_relu_{cnt}", None)
