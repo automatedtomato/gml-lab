@@ -1,6 +1,5 @@
 #include "kernel.hpp"
 
-
 /**
  * @brief square kernel (fp*)
  *

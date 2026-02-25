@@ -27,4 +27,6 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 # To install requred mmcv for mmdet, cuda, torch required version, it is necessary to use mim, not pip.
 RUN mim install mmcv==2.1.0
 
+RUN pip install -U "setuptools>=64.0"
+
 COPY pyproject.toml .

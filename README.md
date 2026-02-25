@@ -11,13 +11,15 @@ The primary goal is to establish a feedback loop of **"Measure (Profile) -> Anal
 * **Micro-Benchmarking**: Custom profiler for tracking layer-wise latency (CPU/GPU) to identify real bottlenecks.
 * **Sensitivity Analysis**: Statistical analysis (SNR, Cosine Similarity) to visualize quantization damage per layer.
 * **High-Throughput I/O**: Optimized data loading via LMDB to prevent GPU starvation during profiling.
+* **Automated AI Code Review**: Integrated Anthropic Claude API via GitHub Actions for automated, high-quality code reviews on every Pull Request.
 
 ## Roadmap (Experiments in Queue)
 
 This lab is currently in **Sprint 2** phase. The following features are under active development:
 
 * [x] **Baseline Measurement**: FP32 vs. INT8 accuracy & latency profiling.
-* [ ] **Custom CUDA Kernels**: Implementing fused kernels for identified bottlenecks (e.g., LayerNorm, Attention).
+* [x] **Custom CUDA Kernels**: Implementing fused kernels for identified bottlenecks (e.g., INT8 Element-wise Add & ReLU).
+* [ ] **Compute-Bound Kernels**: Implementing CUTLASS-based Implicit GEMM kernels for INT8 Conv2d and Linear layers.
 * [ ] **Mixed Precision**: Surgical FP16 fallback for sensitive layers (AutoMP).
 * [ ] **Transformer Support**: Graph tracing patches for ViT/Swin Transformers.
 
@@ -47,7 +49,6 @@ The environment is fully containerized to ensure reproducibility.
 docker build -t gml-lab -f docker/Dockerfile .
 ```
 
-
 2. **Start the container**:
 ```bash
 # Mount current directory. --privileged is required for NVML/Power profiling.
@@ -56,13 +57,10 @@ docker run --gpus all -it --ipc=host --privileged \
   gml-lab bash
 ```
 
-
 3. **Install dependencies (inside container)**:
 ```bash
 pip install -e .
 ```
-
-
 
 ## 2. Data Preparation
 
@@ -145,5 +143,4 @@ gml-lab/
 │       └── ...
 ├── tests/              # Unit tests
 └── tools/              # Profiler & Analysis tools
-
 ```
