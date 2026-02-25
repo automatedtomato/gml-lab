@@ -36,7 +36,7 @@ class GMLQuantReLU(GMLQuantUnaryOpsBase):
         scale = self.output_scale.item()
         if custom_ops is None:
             x = x.dequantize()
-            out = torch.clamp(x, min=zp)
+            out = torch.nn.functional.relu(x)
             return torch.quantize_per_tensor(
                 out,
                 scale=scale,

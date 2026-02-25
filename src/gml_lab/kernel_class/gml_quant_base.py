@@ -20,7 +20,7 @@ class GMLQuantModuleBase(torch.nn.Module, ABC):
     @abstractmethod
     def forward(self, *args, **kwargs) -> torch.Tensor:  # noqa: ANN002, ANN003
         """Abstract forward pass."""
-        raise NotImplementedError
+        pass  # noqa: PIE790
 
 
 class GMLQuantUnaryOpsBase(GMLQuantModuleBase):

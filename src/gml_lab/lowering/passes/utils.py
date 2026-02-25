@@ -5,6 +5,7 @@ from typing import Any
 import torch
 
 from src.gml_lab.kernel_class.gml_quant_base import GMLQuantModuleBase
+from src.gml_lab.logger import get_logger
 
 
 def extract_qparams(gm: torch.fx.GraphModule, node: torch.fx.Node) -> dict[str, Any]:
@@ -45,6 +46,12 @@ def remove_unused_nodes(graph: torch.fx.Graph, node_list: list[torch.fx.Node]) -
     NOTE: The "nodes" list should be ordered from downstream (outputs)
         to upstream (inputs) to allow cascading deletion.
     """
+    logger = get_logger("remove_nodes")
     for node in node_list:
         if len(node.users) == 0:
             graph.erase_node(node)
+        else:
+            user_names = [u.name for u in node.users]
+            logger.warning(
+                f"Skipped erasing node '{node.name}'. Still used by: {user_names}"
+            )

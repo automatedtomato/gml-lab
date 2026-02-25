@@ -1,5 +1,5 @@
 import argparse
-import sys
+import contextlib
 from pathlib import Path
 
 import mmpretrain
@@ -20,7 +20,7 @@ def parse_args() -> argparse.Namespace:
         default="resnet18_8xb32_in1k",
         help=(
             "Specify the model name compatible with `mim download`. "
-            "To see available models, run `mim searh mmdet`."
+            "To see available models, run `mim search mmdet`."
         ),
     )
     parser.add_argument(
@@ -30,7 +30,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Directory where visualized graph are saved in dot format. "
             "If specified, FxGraphDrawer visualize graphs, "
-            "which requires graphviz and pydot as dependecies."
+            "which requires graphviz and pydot as dependencies."
         ),
     )
     return parser.parse_args()
@@ -47,9 +47,8 @@ def main() -> None:
 
     dump_graph(traced_model, args.arch, args.graph_dump_dir)
 
-    sys.stdout = open(args.graph_dump_dir / f"{args.arch}.txt", "w")  # noqa: SIM115
-    traced_model.graph.print_tabular()
-    sys.stdout = sys.__stdout__
+    with open(args.graph_dump_dir / "qdq.txt", "w") as f, contextlib.redirect_stdout(f):
+        traced_model.graph.print_tabular()
 
 
 if __name__ == "__main__":
