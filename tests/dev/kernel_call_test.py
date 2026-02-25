@@ -4,7 +4,7 @@ import time
 import pytest
 import torch
 
-from tests.utils.test_utils import NO_GPU, SNR_THRESH, calc_blob_snr
+from tests.utils.test_utils import SNR_THRESH, calc_blob_snr
 
 try:
     import gml_lab_custom_ops as custom_ops
