@@ -6,7 +6,7 @@ import time
 import pytest
 import torch
 
-from src.gml_lab.kernel import GMLQuantAdd, GMLQuantAddReLU
+from src.gml_lab.kernel_class import GMLQuantAdd, GMLQuantAddReLU
 from tests.models import AddFunc, AddReLU, IncrementalAdd
 from tests.utils.test_utils import (
     NO_GPU,

@@ -4,6 +4,7 @@ import os
 
 import torch
 
+from src.gml_lab.kernel_class.gml_quant_base import GMLQuantUnaryOpsBase
 from src.gml_lab.logger import get_logger
 
 logger = get_logger("gml_q_relu")
@@ -20,27 +21,25 @@ if not enable_custom_ops:
     custom_ops = None
 
 
-class GMLQuantReLU(torch.nn.Module):
+class GMLQuantReLU(GMLQuantUnaryOpsBase):
     """GML custom quantized ReLU kernel class."""
 
     def __init__(
         self,
-        scale: float | tuple[float],
-        zero_point: int | tuple[int],
+        output_scale: float | tuple[float],
+        output_zp: int | tuple[int],
     ) -> None:
-        super().__init__()
-        self.register_buffer("scale", torch.tensor(scale, dtype=torch.float32))
-        self.register_buffer("zero_point", torch.tensor(zero_point, dtype=torch.int32))
+        super().__init__(output_scale, output_zp)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Run kernel simuated forward pass."""
-        zp = self.zero_point.item()
+        zp = self.output_zp.item()
+        scale = self.output_scale.item()
         if custom_ops is None:
             x = x.dequantize()
             out = torch.clamp(x, min=zp)
             return torch.quantize_per_tensor(
                 out,
-                scale=self.scale.item(),
+                scale=scale,
                 zero_point=zp,
                 dtype=torch.qint8,
             )
@@ -48,6 +47,4 @@ class GMLQuantReLU(torch.nn.Module):
         x = x.int_repr()
         out = custom_ops.quant_relu(x, zp)
 
-        return torch._make_per_tensor_quantized_tensor(
-            out, scale=self.scale.item(), zero_point=zp
-        )
+        return torch._make_per_tensor_quantized_tensor(out, scale=scale, zero_point=zp)

@@ -74,6 +74,13 @@ max-args = 8
     "D103",
     "N812",
 ]
+
+"src/gml_lab/kernel_class/*" = [
+    "D101",
+    "D102",
+    "D103",
+    "N812",
+]
 "experiments/*" = ["ALL"]
 "configs/*" = [
     "C408"
