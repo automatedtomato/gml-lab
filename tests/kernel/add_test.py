@@ -6,8 +6,8 @@ import time
 import pytest
 import torch
 
-from src.gml_lab.kernel import GMLQuantReLU
-from tests.models import ReLUFunc1, ReLUMethod, ReLUModule
+from src.gml_lab.kernel import GMLQuantAdd, GMLQuantAddReLU
+from tests.models import AddFunc, AddReLU, IncrementalAdd
 from tests.utils.test_utils import (
     NO_GPU,
     SNR_THRESH_NONLINEAR,
@@ -21,9 +21,9 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 seeds = [int(os.getenv("SET_SEED", time.time_ns()))]
 
 models = [
-    ReLUFunc1,
-    ReLUMethod,
-    ReLUModule,
+    AddFunc,
+    AddReLU,
+    IncrementalAdd,
 ]
 
 input_shapes = [
@@ -48,11 +48,12 @@ def test_relu(
 
     expected_nodes = [
         NodeInfo.call_function(torch.quantize_per_tensor),
-        NodeInfo.call_module(GMLQuantReLU),  # type: ignore
+        NodeInfo.call_function(torch.quantize_per_tensor),
+        NodeInfo.call_module(GMLQuantAddReLU if model == AddReLU else GMLQuantAdd),  # type: ignore
         NodeInfo.call_method("dequantize"),
     ]
 
-    example_inputs = (torch.rand(input_shape) * 2 - 1,)
+    example_inputs = (torch.randn(input_shape), torch.randn(input_shape) * 2 - 1)
     model = model()
     snr = run_quantizer_test(
         float_model=model,

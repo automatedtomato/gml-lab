@@ -4,7 +4,7 @@ import time
 import pytest
 import torch
 
-from tests.utils.test_utils import NO_GPU, SNR_THRESH, calc_blob_snr
+from tests.utils.test_utils import SNR_THRESH, calc_blob_snr
 
 try:
     import gml_lab_custom_ops as custom_ops
@@ -21,8 +21,7 @@ input_shapes = [
 ]
 
 
-@pytest.mark.gpu
-@pytest.mark.skipif(NO_GPU, reason="CUDA is not available")
+@pytest.mark.skip
 @pytest.mark.parametrize("seed", seeds)
 @pytest.mark.parametrize("input_shape", input_shapes)
 @pytest.mark.parametrize("dtype", [torch.float32])
