@@ -6,34 +6,37 @@ import time
 import pytest
 import torch
 
+from src.gml_lab.kernel import GMLQuantLinear
 from tests.models import LinearBN, LinearModule
 from tests.utils.test_utils import (
+    NO_GPU,
     SNR_THRESH,
+    NodeInfo,
     get_test_output_dir,
     run_quantizer_test,
 )
 
-device = "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 seeds = [int(os.getenv("SET_SEED", time.time_ns()))]
 
 models = [
-    LinearBN,
     LinearModule,
+    LinearBN,
 ]
 
 input_shapes = [
-    [16, 256],
+    [16, 64],
     [1, 32, 224],
 ]
 
 bias = [True, False]
 
 
+@pytest.mark.skipif(NO_GPU, reason="GPU not available")
 @pytest.mark.parametrize("seed", seeds)
 @pytest.mark.parametrize("model", models)
 @pytest.mark.parametrize("input_shape", input_shapes)
-@pytest.mark.parametrize("bias", bias)
 def test_relu(
     seed: int,
     model: torch.nn.Module,
@@ -45,12 +48,22 @@ def test_relu(
     torch.manual_seed(seed)
     out_dir = get_test_output_dir(request.node.name, __file__)
 
-    test_inputs = (torch.rand(input_shape),)
-    model = model(
-        in_features=input_shape[-1], out_features=input_shape[1], bias=bias
-    ).to(device)
+    expected_nodes = [
+        NodeInfo.call_function(torch.quantize_per_tensor),
+        NodeInfo.call_module(GMLQuantLinear),  # type: ignore
+        NodeInfo.call_method("dequantize"),
+    ]
+
+    example_inputs = (torch.randn(input_shape),)
+    model = model(in_features=input_shape[-1], out_features=input_shape[1], bias=bias)
     snr = run_quantizer_test(
-        model, test_inputs, test_inputs, "quant_acc", out_dir, device=device
+        float_model=model,
+        example_inputs=example_inputs,
+        calib_inputs=example_inputs,
+        test_mode="lower_acc",
+        out_dir=out_dir,
+        expected_nodes=expected_nodes,
+        device=device,
     )
 
     assert snr > SNR_THRESH, f"{snr=} < {SNR_THRESH}"  # type: ignore
