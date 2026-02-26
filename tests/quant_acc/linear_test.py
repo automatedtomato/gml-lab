@@ -22,22 +22,21 @@ models = [
     LinearModule,
 ]
 
-input_shapes = [
-    [16, 256],
-    [1, 32, 224],
-]
-
+in_features = [256, 1024]
+out_features = [700, 512]
 bias = [True, False]
 
 
 @pytest.mark.parametrize("seed", seeds)
 @pytest.mark.parametrize("model", models)
-@pytest.mark.parametrize("input_shape", input_shapes)
 @pytest.mark.parametrize("bias", bias)
+@pytest.mark.parametrize("in_features", in_features)
+@pytest.mark.parametrize("out_features", out_features)
 def test_relu(
     seed: int,
     model: torch.nn.Module,
-    input_shape: list[int],
+    in_features: int,
+    out_features: int,
     bias: bool,  # noqa: FBT001
     request: pytest.FixtureRequest,
 ) -> None:
@@ -45,10 +44,10 @@ def test_relu(
     torch.manual_seed(seed)
     out_dir = get_test_output_dir(request.node.name, __file__)
 
-    test_inputs = (torch.rand(input_shape),)
-    model = model(
-        in_features=input_shape[-1], out_features=input_shape[1], bias=bias
-    ).to(device)
+    test_inputs = (torch.randn((1, in_features)),)
+    model = model(in_features=in_features, out_features=out_features, bias=bias).to(
+        device
+    )
     snr = run_quantizer_test(
         model, test_inputs, test_inputs, "quant_acc", out_dir, device=device
     )

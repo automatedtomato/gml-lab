@@ -1,5 +1,6 @@
 import torch
-import torch.ao.quantization.fuser_method_mappings as fuser_mappings
+import torch.ao.nn.quantized.reference as nnqr
+import torch.ao.quantization.fuser_method_mappings as fuser_mapping
 from torch import nn
 from torch.ao.quantization.backend_config import (
     BackendConfig,
@@ -14,6 +15,10 @@ from torch.ao.quantization.fx.custom_config import (
 import src.gml_lab.nn.fused_modules as fcnn
 import src.gml_lab.nn.modules as cnn
 
+__all__ = ["get_gml_backend_config", "get_prepare_custom_config"]
+
+different_observer = ObservationType.OUTPUT_USE_DIFFERENT_OBSERVER_AS_INPUT
+
 default_int8_config = DTypeConfig(
     input_dtype=torch.qint8,
     output_dtype=torch.qint8,
@@ -21,35 +26,40 @@ default_int8_config = DTypeConfig(
     bias_dtype=torch.float,
 )
 
-__all__ = ["get_gml_backend_config", "get_prepare_custom_config"]
 
-
-def _get_default_backend_configs() -> list[BackendPatternConfig]:
+def _get_default_configs() -> list[BackendPatternConfig]:
     default_ops = [
         nn.ReLU,
         cnn.Add,
         fcnn.AddReLU,
-        nn.Linear,
     ]
     default_configs: list[BackendPatternConfig] = []
     for op in default_ops:
         default_configs.append(  # noqa: PERF401
             BackendPatternConfig(op)
-            .set_observation_type(
-                ObservationType.OUTPUT_USE_DIFFERENT_OBSERVER_AS_INPUT
-            )
+            .set_observation_type(different_observer)
             .set_dtype_configs([default_int8_config])
         )
     return default_configs
 
 
-def _get_linear_backend_configs() -> list[BackendPatternConfig]:
+def _get_linear_configs() -> list[BackendPatternConfig]:
     linear_configs: list[BackendPatternConfig] = []
+
+    linear_configs.append(
+        BackendPatternConfig(nn.Linear)
+        .set_observation_type(different_observer)
+        .set_dtype_configs([default_int8_config])
+        .set_root_module(nn.Linear)
+        .set_reference_quantized_module(nnqr.Linear)
+    )
     linear_configs.append(
         BackendPatternConfig((nn.Linear, nn.BatchNorm1d))
-        .set_observation_type(ObservationType.OUTPUT_SHARE_OBSERVER_WITH_INPUT)
+        .set_observation_type(different_observer)
         .set_dtype_configs([default_int8_config])
-        .set_fuser_method(fuser_mappings.fuse_linear_bn)
+        .set_root_module(nn.Linear)
+        .set_reference_quantized_module(nnqr.Linear)
+        .set_fuser_method(fuser_mapping.fuse_linear_bn)
     )
     return linear_configs
 
@@ -58,8 +68,8 @@ def get_gml_backend_config() -> BackendConfig:
     """Get GML Lab custom backend config."""
     return (
         BackendConfig("gml_lab")
-        .set_backend_pattern_configs(_get_default_backend_configs())
-        .set_backend_pattern_configs(_get_linear_backend_configs())
+        .set_backend_pattern_configs(_get_default_configs())
+        .set_backend_pattern_configs(_get_linear_configs())
     )
 
 

@@ -2,7 +2,7 @@ import copy
 
 import torch
 
-from src.gml_lab.lowering.passes import lower_add, lower_relu
+from src.gml_lab.lowering.passes import lower_add, lower_linear, lower_relu
 
 
 def lower_to_gml(qdq_model: torch.fx.GraphModule) -> torch.fx.GraphModule:
@@ -17,5 +17,6 @@ def lower_to_gml(qdq_model: torch.fx.GraphModule) -> torch.fx.GraphModule:
     """
     gml_model = copy.deepcopy(qdq_model)
     lower_add(gml_model)
+    lower_linear(gml_model)
     lower_relu(gml_model)
     return gml_model

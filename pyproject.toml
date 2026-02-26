@@ -80,6 +80,7 @@ max-args = 8
     "D102",
     "D103",
     "N812",
+    "PLR0913"
 ]
 "experiments/*" = ["ALL"]
 "configs/*" = [
