@@ -21,3 +21,7 @@ extern torch::Tensor quant_add(
     const torch::Tensor& a, const torch::Tensor& b, int32_t za, int32_t zb, int32_t out_zp,
     float requant_scale_a, float requant_scale_b, bool has_relu
 );
+extern torch::Tensor quant_linear(
+    const torch::Tensor& input, torch::Tensor weight, std::optional<torch::Tensor> bias,
+    torch::Tensor scales, float output_zp, bool is_per_channel
+);

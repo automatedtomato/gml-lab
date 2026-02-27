@@ -42,8 +42,10 @@ class GMLQuantFullyConnected(GMLQuantUnaryOpsBase):
         )
         self.register_buffer("input_zp", torch.tensor(input_zp, dtype=torch.int32))
 
-        w_scale_t = torch.tensor(weight_scale, dtype=torch.float32)
-        w_zp_t = torch.tensor(weight_zp, dtype=torch.int32)
+        w_scale_t = torch.tensor(
+            weight_scale, dtype=torch.float32, device=weight.device
+        )
+        w_zp_t = torch.tensor(weight_zp, dtype=torch.int32, device=weight.device)
         self.register_buffer("weight_scale", w_scale_t.clone().detach())
         self.register_buffer("weight_zp", w_zp_t.clone().detach())
 
@@ -94,8 +96,7 @@ class GMLQuantFullyConnected(GMLQuantUnaryOpsBase):
                 dtype=torch.qint8,
             )
 
-        # x = x.int_repr()
-        # out = custom_ops.quant_relu(x, zp)
+        x = x.int_repr()
+        out = custom_ops.quant_relu(x, zp)
 
-        # return torch._make_per_tensor_quantized_tensor(out, scale=scale, zero_point=zp)  # noqa: E501
-        raise NotImplementedError
+        return torch._make_per_tensor_quantized_tensor(out, scale=scale, zero_point=zp)

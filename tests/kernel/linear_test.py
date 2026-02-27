@@ -16,8 +16,7 @@ from tests.utils.test_utils import (
     run_quantizer_test,
 )
 
-# device = "cuda" if torch.cuda.is_available() else "cpu"
-device = "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 seeds = [int(os.getenv("SET_SEED", time.time_ns()))]
 
@@ -56,6 +55,7 @@ def test_relu(
     ]
 
     test_inputs = (torch.randn((1, in_features)),)
+    test_inputs = tuple(i.to(device) for i in test_inputs)
     model = model(in_features=in_features, out_features=out_features, bias=bias).to(
         device
     )
