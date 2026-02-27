@@ -17,6 +17,9 @@ include = ["gml_lab*"]
 [tool.ruff]
 line-length = 88
 target-version = "py310"
+extend-exclude = [
+    "third_party",
+]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -73,6 +76,14 @@ max-args = 8
     "D102",
     "D103",
     "N812",
+]
+
+"src/gml_lab/kernel_class/*" = [
+    "D101",
+    "D102",
+    "D103",
+    "N812",
+    "PLR0913"
 ]
 "experiments/*" = ["ALL"]
 "configs/*" = [

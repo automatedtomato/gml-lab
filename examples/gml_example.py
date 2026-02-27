@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
         default="resnet18_8xb32_in1k",
         help=(
             "Specify the model name compatible with `mim download`. "
-            "To see available models, run `mim searh mmdet`."
+            "To see available models, run `mim search mmdet`."
         ),
     )
     parser.add_argument(
@@ -62,7 +62,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Directory where visualized graph are saved in dot format. "
             "If specified, FxGraphDrawer visualize graphs, "
-            "which requires graphviz and pydot as dependecies."
+            "which requires graphviz and pydot as dependencies."
         ),
     )
     parser.add_argument(
@@ -159,7 +159,7 @@ def main() -> None:
     if "qdq" in args.eval_options:
         _ = evaluate(cfg, args.arch, qdq_model, "qdq", test_loader, seed)
     if "cuda" in args.eval_options:
-        _ = evaluate(cfg, args.arch, qdq_model, "cuda", test_loader, seed)
+        _ = evaluate(cfg, args.arch, gml_model, "cuda", test_loader, seed)
 
 
 if __name__ == "__main__":

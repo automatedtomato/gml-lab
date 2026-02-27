@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING
 
 import src.gml_lab.nn.fused_modules as fcnn
 import src.gml_lab.nn.modules as cnn
-from src.gml_lab.kernel import GMLQuantAdd, GMLQuantAddReLU
+from src.gml_lab.kernel_class import GMLQuantAdd, GMLQuantAddReLU
 from src.gml_lab.logger import get_logger
 from src.gml_lab.utils import is_dequant_node, is_per_tensor_quant_node
 
-from .utils import extract_qparams
+from .utils import extract_qparams, remove_unused_nodes
 
 if TYPE_CHECKING:
     from torch.fx import GraphModule
@@ -39,12 +39,12 @@ def lower_add(gm: GraphModule) -> None:
         b_qparams = extract_qparams(gm, dq_b.args[0])
 
         kwargs = {
-            "in_scale_a": a_qparams["scale"],
-            "in_za": a_qparams["zero_point"],
-            "in_scale_b": b_qparams["scale"],
-            "in_zb": b_qparams["zero_point"],
-            "out_scale": out_qparams["scale"],
-            "out_zp": out_qparams["zero_point"],
+            "input_scale_a": a_qparams["output_scale"],
+            "input_za": a_qparams["output_zp"],
+            "input_scale_b": b_qparams["output_scale"],
+            "input_zb": b_qparams["output_zp"],
+            "output_scale": out_qparams["output_scale"],
+            "output_zp": out_qparams["output_zp"],
         }
 
         if isinstance(submodule, cnn.Add):
@@ -62,10 +62,7 @@ def lower_add(gm: GraphModule) -> None:
             )
             node.replace_all_uses_with(new_node)
             new_node.name = new_name
-        graph.erase_node(node)
-        graph.erase_node(target_node)
-        graph.erase_node(dq_a)
-        graph.erase_node(dq_b)
+        remove_unused_nodes(graph, [node, target_node, dq_a, dq_b])
         logger.info(
             f' The Add/AddReLU module "{target_node.name}" is replaced with '
             f'the new quant module "{new_node.name}"'
