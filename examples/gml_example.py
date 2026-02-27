@@ -159,7 +159,7 @@ def main() -> None:
     if "qdq" in args.eval_options:
         _ = evaluate(cfg, args.arch, qdq_model, "qdq", test_loader, seed)
     if "cuda" in args.eval_options:
-        _ = evaluate(cfg, args.arch, qdq_model, "cuda", test_loader, seed)
+        _ = evaluate(cfg, args.arch, gml_model, "cuda", test_loader, seed)
 
 
 if __name__ == "__main__":

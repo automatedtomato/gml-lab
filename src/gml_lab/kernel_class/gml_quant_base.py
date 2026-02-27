@@ -9,7 +9,9 @@ class GMLQuantModuleBase(torch.nn.Module, ABC):
     """Base module for all the kernel classes."""
 
     def __init__(
-        self, output_scale: float | tuple[float, ...], output_zp: int | tuple[int, ...]
+        self,
+        output_scale: float | tuple[float, ...],
+        output_zp: int | tuple[int, ...],
     ) -> None:
         super().__init__()
         self.register_buffer(

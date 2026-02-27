@@ -7,7 +7,7 @@ import torch
 from src.gml_lab.kernel_class.gml_quant_base import GMLQuantBinaryOpsBase
 from src.gml_lab.logger import get_logger
 
-logger = get_logger("gml_q_relu")
+logger = get_logger("gml_q_add")
 
 try:
     import gml_lab_custom_ops as custom_ops
