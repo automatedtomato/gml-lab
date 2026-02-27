@@ -76,6 +76,7 @@ torch::Tensor quant_linear(const torch::Tensor &input, const torch::Tensor &weig
     int32_t *bias_ptr = nullptr;
     if (bias.has_value() && bias->numel() > 0) {
         CHECK_CUDA(bias.value());
+        CHECK_INT32(bias.value());
         bias_ptr = bias->data_ptr<int32_t>();
     }
 
@@ -102,12 +103,13 @@ torch::Tensor quant_linear(const torch::Tensor &input, const torch::Tensor &weig
             temp_output.data_ptr<int32_t>(), final_output.data_ptr<int8_t>(),
             scales.data_ptr<float>(), output_zp, m, n);
     } else {
-        float scale_val = scales.data_ptr<float>()[0];
+        float scale_val = scales[0].item<float>();
         kernel_requantize_per_tensor<<<blocks, kDefaultThreads>>>(
             temp_output.data_ptr<int32_t>(), final_output.data_ptr<int8_t>(), scale_val,
             output_zp, total_elements);
     }
 
+    cudaDeviceSynchronize();
     cudaError_t err = cudaGetLastError();
     TORCH_CHECK(err == cudaSuccess,
                 "Requantize kernel failed: ", cudaGetErrorString(err));

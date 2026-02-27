@@ -104,7 +104,7 @@ class GMLQuantFullyConnected(GMLQuantUnaryOpsBase):
         if w_scale.dim() == 1:
             w_scale = w_scale.unsqueeze(1)
 
-        is_per_channel = self.weight_quant_axis is not None
+        is_per_channel = self.weight_scale.numel() > 1
         out = custom_ops.quant_linear(
             x,
             self.weight,
