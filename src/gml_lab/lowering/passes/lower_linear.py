@@ -53,6 +53,7 @@ def lower_linear(gm: GraphModule) -> None:
             "input_zp": in_qparams["output_zp"],
             "output_scale": out_qparams["output_scale"],
             "output_zp": out_qparams["output_zp"],
+            "weight_quant_axis": out_qparams.get("weight_quant_axis", 0),
         }
         new_module = GMLQuantFullyConnected(**kwargs)
         new_name = graph._graph_namespace.create_name(f"gml_q_fc_{cnt}", None)

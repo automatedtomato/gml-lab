@@ -21,7 +21,7 @@ def extract_qparams(gm: torch.fx.GraphModule, node: torch.fx.Node) -> dict[str, 
                 }
             )
             if hasattr(submod, "weight_quant_axis"):
-                qparams.update({"quant_axis": submod.quant_axis})
+                qparams.update({"weight_quant_axis": submod.weight_quant_axis})
             return qparams
 
         msg = f"Expected GMLQuantModuleBase. Got {type(submod)} for node `{node.name}`"

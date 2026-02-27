@@ -36,7 +36,7 @@ bias = [True, False]
 @pytest.mark.parametrize("bias", bias)
 @pytest.mark.parametrize("in_features", in_features)
 @pytest.mark.parametrize("out_features", out_features)
-def test_relu(
+def test_linear(
     seed: int,
     model: torch.nn.Module,
     in_features: int,

@@ -12,11 +12,10 @@ if TYPE_CHECKING:
 
 
 def unify_linear(gm: GraphModule) -> None:
-    """Find linear finction and unify to nn.Linear."""
+    """Find linear function and unify to nn.Linear."""
     logger = get_logger("unify_pass")
     graph = gm.graph
     cnt = 0
-    new_module = None
 
     for node in graph.nodes:
         if node.op != "call_function" or node.target != F.linear:
@@ -24,19 +23,28 @@ def unify_linear(gm: GraphModule) -> None:
         weight_node = node.args[1]
         if weight_node.op != "get_attr":
             continue
-        for w in str(weight_node).split("."):
-            weight_tensor = getattr(gm, str(w))
-        bias = node.args[2] is not None
+        weight_tensor = gm
+        for w in str(weight_node.target).split("."):
+            weight_tensor = getattr(weight_tensor, w)
+
+        bias_tensor = None
+        bias_node = node.args[2] if len(node.args) > 2 else node.kwargs.get("bias")  # noqa: PLR2004
+        if bias_node is not None:
+            bias_tensor = gm
+            for b in str(bias_node.target).split("."):
+                bias_tensor = getattr(bias_tensor, b)
 
         kwargs = {
             "in_features": weight_tensor.shape[1],
             "out_features": weight_tensor.shape[0],
-            "bias": bias,
+            "bias": bias_tensor is not None,
         }
-        new_module = torch.nn.Linear(**kwargs)
 
-        if new_module is None:
-            continue
+        new_module = torch.nn.Linear(**kwargs)
+        with torch.no_grad():
+            new_module.weight.copy_(weight_tensor)
+            if bias_tensor is not None:
+                new_module.bias.copy_(bias_tensor)
 
         new_name = graph._graph_namespace.create_name(f"unified_linear_{cnt}", None)
         gm.add_submodule(new_name, new_module)
@@ -54,7 +62,6 @@ def unify_linear(gm: GraphModule) -> None:
             f'the new module "{new_node.name}"'
         )
         cnt += 1
-        new_module = None
 
     gm.graph.lint()
     gm.recompile()

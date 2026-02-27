@@ -71,15 +71,19 @@ class GMLQuantFullyConnected(GMLQuantUnaryOpsBase):
 
         if bias is not None:
             self.register_buffer("bias", bias)
+            bias_scale = input_scale * w_scale_t
+            bias_int32 = torch.round(bias / bias_scale).to(torch.int32)
+            self.register_buffer("bias_int32", bias_int32)
         else:
             self.bias = None
+            self.bias_int32 = None
         self.weight_quant_axis = weight_quant_axis
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        zp = self.output_zp.item()
+        scale = self.output_scale.item()
+        w_scale = self.weight_scale
         if custom_ops is None:
-            zp = self.output_zp.item()
-            scale = self.output_scale.item()
-            w_scale = self.weight_scale
             w_zp = self.weight_zp
 
             if w_scale.dim() == 1:
@@ -97,6 +101,17 @@ class GMLQuantFullyConnected(GMLQuantUnaryOpsBase):
             )
 
         x = x.int_repr()
-        out = custom_ops.quant_relu(x, zp)
+        if w_scale.dim() == 1:
+            w_scale = w_scale.unsqueeze(1)
+
+        is_per_channel = self.weight_quant_axis is not None
+        out = custom_ops.quant_linear(
+            x,
+            self.weight,
+            self.bias_int32,
+            self.requant_scale,
+            zp,
+            is_per_channel,
+        )
 
         return torch._make_per_tensor_quantized_tensor(out, scale=scale, zero_point=zp)
