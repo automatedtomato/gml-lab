@@ -16,7 +16,13 @@ def get_gml_qconfig(method: str = "per_tensor") -> QConfig:
                 quant_min=INT8_MIN,
                 quant_max=INT8_MAX,
             ),
-            weight=observer.default_per_channel_weight_observer,
+            weight=observer.PerChannelMinMaxObserver.with_args(
+                ch_axis=0,
+                dtype=torch.qint8,
+                qscheme=torch.per_channel_symmetric,
+                quant_min=INT8_MIN,
+                quant_max=INT8_MAX,
+            ),
         )
     else:
         msg = f"method `{method}` is not implemented yet."

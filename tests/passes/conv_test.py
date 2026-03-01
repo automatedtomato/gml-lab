@@ -11,6 +11,7 @@ from torch.ao.quantization import observer
 from tests.models import (
     ConvBN,
     ConvBNReLUFunc,
+    ConvFunc,
     ConvReLUFunc,
 )
 from tests.utils.node_info import NodeInfo
@@ -19,13 +20,22 @@ from tests.utils.test_utils import get_test_output_dir, run_quantizer_test
 seeds = [int(os.getenv("SET_SEED", time.time_ns()))]
 
 
+models = [
+    ConvFunc,
+    ConvBN,
+]
+
+
 @pytest.mark.parametrize("seed", seeds)
-def test_unify_conv_bn(seed: int, request: pytest.FixtureRequest) -> None:
+@pytest.mark.parametrize("model", models)
+def test_unify_conv(
+    seed: int, model: torch.nn.Module, request: pytest.FixtureRequest
+) -> None:
     device = "cpu"
     torch.manual_seed(seed)
     out_dir = get_test_output_dir(request.node.name, __file__)
 
-    model = ConvBN(3, 1, kernel_size=(3, 3))
+    model = model(in_channels=3, out_channels=128, kernel_size=(3, 3), bias=False)
     example_inputs = (torch.randn((1, 3, 28, 28)),)
 
     expected_nodes = [

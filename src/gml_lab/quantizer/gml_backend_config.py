@@ -1,4 +1,5 @@
 import torch
+import torch.ao.nn.intrinsic as nni
 import torch.ao.nn.quantized.reference as nnqr
 import torch.ao.quantization.fuser_method_mappings as fuser_mapping
 from torch import nn
@@ -26,18 +27,18 @@ default_int8_config = DTypeConfig(
     bias_dtype=torch.float,
 )
 
-__all__ = ["get_gml_backend_config"]
-
 
 def fuse_conv_relu(is_qat: bool, conv: nn.Module, relu: nn.Module) -> nn.Module:  # noqa: ARG001, FBT001
+    """Fuse conv and relu: custom fuser mapping function."""
     return nni.ConvReLU2d(conv, relu)
 
 
-def _get_default_backend_configs() -> list[BackendPatternConfig]:
+def _get_default_configs() -> list[BackendPatternConfig]:
     default_ops = [
         nn.ReLU,
         cnn.Add,
         fcnn.AddReLU,
+        nni.ConvReLU2d,
     ]
     default_configs: list[BackendPatternConfig] = []
     for op in default_ops:
@@ -70,12 +71,50 @@ def _get_linear_configs() -> list[BackendPatternConfig]:
     return linear_configs
 
 
+def _get_conv_configs() -> list[BackendPatternConfig]:
+    conv_configs: list[BackendPatternConfig] = []
+
+    conv_configs.append(
+        BackendPatternConfig(nn.Conv2d)
+        .set_observation_type(different_observer)
+        .set_dtype_configs([default_int8_config])
+        .set_root_module(nn.Conv2d)
+        .set_reference_quantized_module(nnqr.Conv2d)
+    )
+    conv_configs.append(
+        BackendPatternConfig((nn.Conv2d, nn.BatchNorm2d))
+        .set_observation_type(different_observer)
+        .set_dtype_configs([default_int8_config])
+        .set_root_module(nn.Conv2d)
+        .set_reference_quantized_module(nnqr.Conv2d)
+        .set_fuser_method(fuser_mapping.fuse_conv_bn)
+    )
+    conv_configs.append(
+        BackendPatternConfig((nn.Conv2d, nn.ReLU))
+        .set_observation_type(different_observer)
+        .set_dtype_configs([default_int8_config])
+        .set_root_module(nni.ConvReLU2d)
+        .set_reference_quantized_module(nni.ConvReLU2d)
+        .set_fuser_method(fuse_conv_relu)
+    )
+    conv_configs.append(
+        BackendPatternConfig((nn.Conv2d, nn.BatchNorm2d, nn.ReLU))
+        .set_observation_type(different_observer)
+        .set_dtype_configs([default_int8_config])
+        .set_root_module(nni.ConvReLU2d)
+        .set_reference_quantized_module(nni.ConvReLU2d)
+        .set_fuser_method(fuser_mapping.fuse_conv_bn_relu)
+    )
+    return conv_configs
+
+
 def get_gml_backend_config() -> BackendConfig:
     """Get GML Lab custom backend config."""
     return (
         BackendConfig("gml_lab")
         .set_backend_pattern_configs(_get_default_configs())
         .set_backend_pattern_configs(_get_linear_configs())
+        .set_backend_pattern_configs(_get_conv_configs())
     )
 
 
