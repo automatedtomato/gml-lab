@@ -3,23 +3,24 @@ from __future__ import annotations
 import os
 
 import torch
+from torch.nn.modules.utils import _pair
 
 from src.gml_lab.logger import get_logger
 
 from .gml_quant_base import GMLQuantUnaryOpsBase
 
 logger = get_logger("gml_fusedq_conv")
+
+try:
+    import gml_lab_custom_ops as custom_ops
+except ImportError as e:
+    logger.error(f"Error importing custom_ops: {e}")
+    custom_ops = None
+
 enable_custom_ops = os.getenv("ENABLE_CUSTOMOPS", "1") not in ["0", False]
 
 if not enable_custom_ops:
     custom_ops = None
-
-# try:
-#     import gml_lab_custom_ops as custom_ops
-# except ImportError as e:
-#     logger.error(f"Error importing custom_ops: {e}")
-#     custom_ops = None
-custom_ops = None
 
 
 class GMLQuantConvBase(GMLQuantUnaryOpsBase):
@@ -29,9 +30,9 @@ class GMLQuantConvBase(GMLQuantUnaryOpsBase):
         self,
         weight: torch.Tensor,
         bias: torch.Tensor | None,
-        stride: int,
-        padding: int,
-        dilation: int,
+        stride: int | tuple[int, int],
+        padding: int | tuple[int, int],
+        dilation: int | tuple[int, int],
         groups: int,
         weight_scale: float,
         weight_zp: int,
@@ -55,7 +56,9 @@ class GMLQuantConvBase(GMLQuantUnaryOpsBase):
         self.register_buffer("weight_zp", w_zp_t.clone().detach())
 
         requant_scale = (input_scale * w_scale_t) / output_scale
-        self.register_buffer("requant_scale", requant_scale.clone().detach())
+        self.register_buffer(
+            "requant_scale", requant_scale.to(torch.float32).clone().detach()
+        )
 
         if w_scale_t.numel() == 1:
             weight = torch.quantize_per_tensor(
@@ -80,10 +83,10 @@ class GMLQuantConvBase(GMLQuantUnaryOpsBase):
             self.bias = None
             self.bias_int32 = None
 
-        self.stride = stride
-        self.padding = padding
+        self.stride = _pair(stride)
+        self.padding = _pair(padding)
         self.groups = groups
-        self.dilation = dilation
+        self.dilation = _pair(dilation)
 
         self.weight_quant_axis = weight_quant_axis
 
@@ -92,6 +95,10 @@ class GMLQuantConvBase(GMLQuantUnaryOpsBase):
         scale = self.output_scale.item()
         zp = self.output_zp.item()
         w_scale = self.weight_scale
+
+        c_in = x.shape[1]
+        if c_in % 16 != 0:
+            logger.warning("c_in is not aligned to 16 ")
 
         if custom_ops is None:
             w_zp = self.weight_zp
@@ -120,21 +127,29 @@ class GMLQuantConvBase(GMLQuantUnaryOpsBase):
             )
 
         x = x.int_repr()
+        x = x.permute(0, 2, 3, 1).contiguous()
+        weight = self.weight.permute(0, 2, 3, 1).contiguous()
         if w_scale.dim() == 1:
             w_scale = w_scale.view(-1, 1, 1, 1)
 
         is_per_channel = self.weight_scale.numel() > 1
-        out = custom_ops.quant_fused_conv(
+        out = custom_ops.fused_quant_conv(
             x,
-            self.weight,
+            weight,
             self.bias_int32,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.groups,
             self.requant_scale,
             zp,
             fuse_relu,
             is_per_channel,
         )
 
-        raise NotImplementedError
+        out = out.permute(0, 3, 1, 2).contiguous()
+
+        return torch._make_per_tensor_quantized_tensor(out, scale=scale, zero_point=zp)
 
 
 class GMLQuantConv(GMLQuantConvBase):

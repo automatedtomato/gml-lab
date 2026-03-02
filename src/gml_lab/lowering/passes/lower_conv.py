@@ -9,7 +9,7 @@ from src.gml_lab.kernel_class import GMLQuantConv, GMLQuantConvReLU
 from src.gml_lab.logger import get_logger
 from src.gml_lab.utils import is_dequant_node, is_per_tensor_quant_node
 
-from .utils import extract_qparams
+from .utils import extract_qparams, remove_unused_nodes
 
 if TYPE_CHECKING:
     from torch.fx import GraphModule
@@ -95,9 +95,7 @@ def lower_conv(gm: GraphModule) -> None:
             new_node = graph.call_module(new_name, args=(dq_node.args[0],), kwargs={})
             node.replace_all_uses_with(new_node)
             new_node.name = new_name
-        graph.erase_node(node)
-        graph.erase_node(target_node)
-        graph.erase_node(dq_node)
+            remove_unused_nodes(graph, [node, target_node, dq_node])
         logger.info(
             f' The Conv/ConvReLU module "{target_node.name}" is replaced with '
             f'the new quant module "{new_node.name}"'

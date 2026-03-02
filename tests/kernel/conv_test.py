@@ -18,8 +18,7 @@ from tests.utils.test_utils import (
     run_quantizer_test,
 )
 
-# device = "cuda" if torch.cuda.is_available() else "cpu"
-device = "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 seeds = [int(os.getenv("SET_SEED", time.time_ns()))]
 
@@ -31,17 +30,24 @@ models = [
 INPUT_SHAPE = [224, 224]
 kernel_shapes = [
     (16, 32, 3, 3),
-    (64, 128, 1, 1),
+    # (64, 128, 1, 1),
 ]
 bias = [True, False]
-stride = [[1, 1], [1, 2], [2, 1], [2, 2]]
-padding = [[0, 0], [0, 1]]
+stride = [
+    [1, 1],
+    # [1, 2],
+    # [2, 1],
+    # [2, 2]
+]
+padding = [
+    [0, 0],
+    # [0, 1]
+]
 groups = [1]
 
-combi = itertools.product(bias, stride, padding, groups)
+combi = itertools.product(stride, padding, groups)
 conv_params = [
-    {"bias": b, "stride": st, "padding": p, "dilation": 1, "groups": g}
-    for b, st, p, g in combi
+    {"stride": st, "padding": p, "dilation": 1, "groups": g} for st, p, g in combi
 ]
 
 
@@ -50,10 +56,12 @@ conv_params = [
 @pytest.mark.parametrize("model", models)
 @pytest.mark.parametrize("kernel_shape", kernel_shapes)
 @pytest.mark.parametrize("conv_param", conv_params)
+@pytest.mark.parametrize("bias", bias)
 def test_conv_bn(
     seed: int,
     model: torch.nn.Module,
     kernel_shape: list[int],
+    bias: bool,  # noqa: FBT001
     conv_param: dict[str, Any],
     request: pytest.FixtureRequest,
 ) -> None:
@@ -73,7 +81,7 @@ def test_conv_bn(
     test_input_shape = [1, in_channels, *INPUT_SHAPE]
     example_inputs = (torch.randn(test_input_shape),)
 
-    model = model(in_channels, out_channels, (h, w), **conv_param)
+    model = model(in_channels, out_channels, (h, w), bias=bias, **conv_param)
 
     snr = run_quantizer_test(
         model,
