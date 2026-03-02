@@ -68,15 +68,28 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check trigger keyword
+        id: check
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if echo "$COMMIT_MSG" | grep -q "\[review\]"; then
+            echo "triggered=true" >> $GITHUB_OUTPUT
+          else
+            echo "triggered=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Install Node.js
+        if: steps.check.outputs.triggered == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install Claude Code
+        if: steps.check.outputs.triggered == 'true'
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Run Review
+        if: steps.check.outputs.triggered == 'true'
         id: review
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -107,6 +120,7 @@ jobs:
           echo "$EOF" >> $GITHUB_OUTPUT
 
       - name: Post PR comment
+        if: steps.check.outputs.triggered == 'true'
         id: comment
         continue-on-error: true
         env:
@@ -116,8 +130,8 @@ jobs:
           gh pr comment ${{ github.event.pull_request.number }} --body "$REVIEW_BODY"
 
       - name: Upload review as artifact (fallback)
-        if: steps.comment.outcome == 'failure'
+        if: steps.check.outputs.triggered == 'true' && steps.comment.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: claude-review-${{ github.sha }}
-          path: internal/docs/review/
+          path: docs/review/
