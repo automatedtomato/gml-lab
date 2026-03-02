@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 import torch
 
-from src.gml_lab.kernel import GMLQuantConv, GMLQuantConvReLU
+from src.gml_lab import kernel_class
 from tests.models import ConvBN, ConvBNReLUFunc, ConvModule, ConvReLUFunc
 from tests.utils.node_info import NodeInfo
 from tests.utils.test_utils import (
@@ -30,23 +30,13 @@ models = [
 
 INPUT_SHAPE = [224, 224]
 kernel_shapes = [
-    (3, 1, 1, 1),
-    # (2, 3, 1, 3),
-    # (1, 2, 3, 1),
+    (16, 32, 3, 3),
+    (64, 128, 1, 1),
 ]
 bias = [True, False]
-stride = [
-    [1, 1],
-    # [1, 2],
-    # [2, 1],
-    # [2, 2]
-]
-padding = [
-    [0, 0],
-    # [1, 1],
-    # [0, 1]
-]
-groups = [1, 2]
+stride = [[1, 1], [1, 2], [2, 1], [2, 2]]
+padding = [[0, 0], [0, 1]]
+groups = [1]
 
 combi = itertools.product(bias, stride, padding, groups)
 conv_params = [
@@ -73,7 +63,7 @@ def test_conv_bn(
 
     expected_nodes = [
         NodeInfo.call_function(torch.quantize_per_tensor),
-        NodeInfo.call_module(GMLQuantConv),
+        NodeInfo.call_module(kernel_class.GMLQuantConv),
         NodeInfo.call_method("dequantize"),
     ]
 
@@ -122,7 +112,7 @@ def test_conv_relu(
 
     expected_nodes = [
         NodeInfo.call_function(torch.quantize_per_tensor),
-        NodeInfo.call_module(GMLQuantConvReLU),
+        NodeInfo.call_module(kernel_class.GMLQuantConvReLU),
         NodeInfo.call_method("dequantize"),
     ]
 

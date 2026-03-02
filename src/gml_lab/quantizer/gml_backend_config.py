@@ -94,7 +94,7 @@ def _get_conv_configs() -> list[BackendPatternConfig]:
         .set_observation_type(different_observer)
         .set_dtype_configs([default_int8_config])
         .set_root_module(nni.ConvReLU2d)
-        .set_reference_quantized_module(nni.ConvReLU2d)
+        .set_reference_quantized_module(nnqr.Conv2d)
         .set_fuser_method(fuse_conv_relu)
     )
     conv_configs.append(
@@ -102,7 +102,7 @@ def _get_conv_configs() -> list[BackendPatternConfig]:
         .set_observation_type(different_observer)
         .set_dtype_configs([default_int8_config])
         .set_root_module(nni.ConvReLU2d)
-        .set_reference_quantized_module(nni.ConvReLU2d)
+        .set_reference_quantized_module(nnqr.Conv2d)
         .set_fuser_method(fuser_mapping.fuse_conv_bn_relu)
     )
     return conv_configs
