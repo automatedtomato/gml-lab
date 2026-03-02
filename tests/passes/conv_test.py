@@ -35,8 +35,8 @@ def test_unify_conv(
     torch.manual_seed(seed)
     out_dir = get_test_output_dir(request.node.name, __file__)
 
-    model = model(in_channels=3, out_channels=128, kernel_size=(3, 3), bias=False)
-    example_inputs = (torch.randn((1, 3, 28, 28)),)
+    model = model(in_channels=32, out_channels=16, kernel_size=(3, 3), bias=False)
+    example_inputs = (torch.randn((16, 32, 224, 224)),)
 
     expected_nodes = [
         NodeInfo.call_module(observer.MinMaxObserver),  # type: ignore
@@ -70,8 +70,8 @@ def test_unify_conv_relu(
     torch.manual_seed(seed)
     out_dir = get_test_output_dir(request.node.name, __file__)
 
-    model = model(3, 1, kernel_size=(3, 3))
-    example_inputs = (torch.randn((1, 3, 28, 28)),)
+    model = model(32, 16, kernel_size=(3, 3))
+    example_inputs = (torch.randn((16, 32, 224, 224)),)
 
     expected_nodes = [
         NodeInfo.call_module(observer.MinMaxObserver),  # type: ignore
