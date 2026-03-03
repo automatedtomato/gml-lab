@@ -22,6 +22,26 @@ class ConvModule(nn.Module):
         return self.conv(x)
 
 
+class ConvIdentity(ConvModule):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: tuple[int, int],
+        **kwargs,  # noqa: ANN003
+    ) -> None:
+        super().__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            **kwargs,
+        )
+        self.identity = torch.nn.Identity()
+
+    def foward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.identity(super().forward(x))
+
+
 class ConvFunc(nn.Module):
     def __init__(
         self,
