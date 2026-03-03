@@ -35,7 +35,8 @@ def extract_qparams(gm: torch.fx.GraphModule, node: torch.fx.Node) -> dict[str, 
             }
         )
         if node.target == torch.quantize_per_channel:
-            qparams.update({"axis": node.args[3]})
+            qparams.update({"axis": node.args[4]})
+        qparams.update({"dtype": node.args[3]})
         return qparams
 
     msg = f"Unsupported node for extraction: op={node.op}, target={node.target}"

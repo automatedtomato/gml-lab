@@ -4,11 +4,12 @@ from .conv import (
     ConvBNReLUFunc,
     ConvBNReLUMod,
     ConvFunc,
+    ConvIdentity,
     ConvModule,
     ConvReLUFunc,
     ConvReLUMod,
 )
-from .linear import LinearBN, LinearFunc, LinearModule
+from .linear import LinearBN, LinearFunc, LinearIdentity, LinearModule
 from .relu import ReLUFunc1, ReLUFunc2, ReLUMethod, ReLUModule
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     "ConvBNReLUMod",
     "ConvBNReLUMod",
     "ConvFunc",
+    "ConvIdentity",
     "ConvModule",
     "ConvReLU",
     "ConvReLUFunc",
@@ -32,6 +34,7 @@ __all__ = [
     "IncrementalAdd",
     "LinearBN",
     "LinearFunc",
+    "LinearIdentity",
     "LinearModule",
     "ReLUFunc1",
     "ReLUFunc2",
