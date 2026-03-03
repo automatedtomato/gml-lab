@@ -49,7 +49,7 @@ def parse_args() -> argparse.Namespace:
         help="Specify batch size for evaluation. Default to 64.",
     )
     parser.add_argument(
-        "--calib-images",
+        "--calib-size",
         type=int,
         help=(
             "Sepcify the number of images to be used in calibaretion processs. "
@@ -57,7 +57,7 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--graph-dump-dir",
+        "--graph-out-dir",
         type=Path,
         help=(
             "Directory where visualized graph are saved in dot format. "
@@ -66,7 +66,7 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--lbl-dump-dir",
+        "--analysis-dir",
         type=Path,
         help=(
             "Directory where layer-by-layer sensitivity analysis reports are saved. "
@@ -107,8 +107,8 @@ def main() -> None:
     example_inputs = (example_input.to(device),)
     example_inputs = tuple(i.to(device) for i in example_input)
 
-    calib_images = args.batch_size if args.calib_images is None else args.calib_images
-    total_calib_batches = math.ceil(calib_images / args.batch_size)
+    calib_size = args.batch_size if args.calib_size is None else args.calib_size
+    total_calib_batches = math.ceil(calib_size / args.batch_size)
 
     prepared_model, qdq_model = quantize(
         float_model,
@@ -120,25 +120,21 @@ def main() -> None:
 
     gml_model = lower_to_gml(qdq_model)
 
-    if args.graph_dump_dir is not None:
-        dump_graph(prepared_model, args.arch + "_prepared", args.graph_dump_dir)
-        dump_graph(qdq_model, args.arch + "_qdq", args.graph_dump_dir)
-        dump_graph(gml_model, args.arch + "_cuda", args.graph_dump_dir)
+    if args.graph_out_dir is not None:
+        dump_graph(prepared_model, args.arch + "_prepared", args.graph_out_dir)
+        dump_graph(qdq_model, args.arch + "_qdq", args.graph_out_dir)
+        dump_graph(gml_model, args.arch + "_cuda", args.graph_out_dir)
 
-    if args.lbl_dump_dir is not None:
-        prepared_model.eval()
-        qdq_model.eval()
-        gml_model.eval()
+    if args.analysis_dir is not None:
+        prepared_model.eval().to(device)
+        qdq_model.eval().to(device)
+        gml_model.eval().to(device)
         analysis_input = example_input[:1].to(device)
-        # prepared_model.eval().to("cpu")
-        # qdq_model.eval().to("cpu")
-        # gml_model.eval().to("cpu")
-        # analysis_input = example_input[:1].to("cpu")
         generate_analysis_report(
-            prepared_model, qdq_model, analysis_input, args.lbl_dump_dir
+            prepared_model, qdq_model, analysis_input, args.analysis_dir
         )
         generate_analysis_report(
-            qdq_model, gml_model, analysis_input, args.lbl_dump_dir
+            qdq_model, gml_model, analysis_input, args.analysis_dir
         )
         prepared_model.to(device)
         qdq_model.to(device)

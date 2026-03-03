@@ -202,37 +202,37 @@ def get_target_layer(gm: GraphModule) -> tuple[list[str], list[str]]:
 
 
 def run_sensitivity_analysis(
-    prepared_model: GraphModule,
-    qdq_model: GraphModule,
+    ref_model: GraphModule,
+    target_model: GraphModule,
     analysis_input: torch.Tensor,
 ) -> list[CompareInfo]:
     """Run sensitivity analysis."""
-    target_nodes, _ = get_target_layer(prepared_model)
+    target_nodes, _ = get_target_layer(ref_model)
 
     with (
         torch.no_grad(),
-        ActivationCollector(prepared_model, target_nodes) as collector_fp32,
-        ActivationCollector(qdq_model, target_nodes) as collector_qdq,
+        ActivationCollector(ref_model, target_nodes) as collector_ref,
+        ActivationCollector(target_model, target_nodes) as collector_target,
     ):
-        _ = prepared_model(analysis_input)
-        _ = qdq_model(analysis_input)
+        _ = ref_model(analysis_input)
+        _ = target_model(analysis_input)
 
-        outputs_fp32 = collector_fp32.outputs
-        outputs_qdq = collector_qdq.outputs
+        outputs_ref = collector_ref.outputs
+        outputs_target = collector_target.outputs
 
     results = []
 
     for name in tqdm(target_nodes, desc="Extracting feat map"):
-        if name not in outputs_fp32 or name not in outputs_qdq:
+        if name not in outputs_ref or name not in outputs_target:
             continue
 
-        feat_org = outputs_fp32[name]
-        feat_target = outputs_qdq[name]
+        feat_org = outputs_ref[name]
+        feat_target = outputs_target[name]
 
         snr = compute_blob_snr(feat_org, feat_target)
         cos_sim = compute_blob_cos_sim(feat_org, feat_target)
 
-        qparams = get_quant_params_from_node_names(qdq_model, name)
+        qparams = get_quant_params_from_node_names(target_model, name)
 
         info = CompareInfo(
             org_node=name,
