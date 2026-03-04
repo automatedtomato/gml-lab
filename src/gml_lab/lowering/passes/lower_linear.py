@@ -61,6 +61,7 @@ def lower_linear(gm: GraphModule) -> None:
 
         with gm.graph.inserting_after(node):
             new_node = graph.call_module(new_name, args=(dq_node.args[0],), kwargs={})
+            new_node.meta["source_module"] = target_node.target
             node.replace_all_uses_with(new_node)
             new_node.name = new_name
         remove_unused_nodes(graph, [node, target_node, dq_node])
