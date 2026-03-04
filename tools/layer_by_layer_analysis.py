@@ -2,20 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
 from torch.ao.quantization.fake_quantize import FakeQuantize
-from torch.fx import GraphModule, Node
+from torch.fx import GraphModule, Interpreter, Node
 from tqdm import tqdm
 
 from src.gml_lab.utils import is_fake_quant_node, is_observer_node, is_quantize_node
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 
 @dataclass
@@ -150,34 +147,31 @@ def get_quant_params_from_node_names(
     return qparams
 
 
-class ActivationCollector:
-    """Collect output from specified layer."""
+class FxActivationCollector(Interpreter):
+    """Collect output using Fx Interpreter based on meta tags or node targets."""
 
-    def __init__(self, model: GraphModule, target_names: list[str]) -> None:
-        self.model = model
-        self.target_names = target_names
-        self.outputs: dict[str, torch.Tensor] = {}
-        self.hooks: list[Any] = []
+    def __init__(self, model: GraphModule, target_modules: list[str]) -> None:
+        super().__init__(model)
+        self.target_modules = target_modules
+        self.outputs: dict[str, np.ndarray] = {}
 
-    def _get_hook(self, name: str) -> Callable:
-        def hook(model, input, output) -> None:  # noqa: A002, ANN001, ARG001
-            if isinstance(output, torch.Tensor):
-                self.outputs[name] = output.detach().cpu().numpy()
+    def run_node(self, node: Node) -> Any:  # noqa: ANN401
+        """Override FxInterpreter.run_node()."""
+        result = super().run_node(node)
 
-        return hook
+        module_key = node.meta.get("source_module", None)
+        if module_key is None and node.op == "call_module":
+            module_key = str(node.target)
+        if module_key in self.target_modules:
+            val = result
+            if isinstance(val, tuple | list) and len(val) > 0:
+                val = val[0]
 
-    def __enter__(self) -> None:
-        self.outputs.clear()
-        self.hooks = []
-        for name in self.target_names:
-            module = self.model.get_submodule(name)
-            h = module.register_forward_hook(self._get_hook(name))
-            self.hooks.append(h)
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback) -> None:  # noqa: ANN001
-        for h in self.hooks:
-            h.remove()
+            if isinstance(val, torch.Tensor):
+                if val.is_quantized:
+                    val = val.dequantize()
+                self.outputs[module_key] = val.detach().cpu().numpy()
+        return result
 
 
 def get_target_layer(gm: GraphModule) -> tuple[list[str], list[str]]:
@@ -209,16 +203,14 @@ def run_sensitivity_analysis(
     """Run sensitivity analysis."""
     target_nodes, _ = get_target_layer(ref_model)
 
-    with (
-        torch.no_grad(),
-        ActivationCollector(ref_model, target_nodes) as collector_ref,
-        ActivationCollector(target_model, target_nodes) as collector_target,
-    ):
-        _ = ref_model(analysis_input)
-        _ = target_model(analysis_input)
+    collector_ref = FxActivationCollector(ref_model, target_nodes)
+    collector_target = FxActivationCollector(target_model, target_nodes)
+    with torch.no_grad():
+        collector_ref.run(analysis_input)
+        collector_target.run(analysis_input)
 
-        outputs_ref = collector_ref.outputs
-        outputs_target = collector_target.outputs
+    outputs_ref = collector_ref.outputs
+    outputs_target = collector_target.outputs
 
     results = []
 
@@ -337,8 +329,8 @@ def _plot_overview(results: list[CompareInfo], save_path: Path) -> None:
 
 
 def generate_analysis_report(
-    prepared_model: GraphModule,
-    qdq_model: GraphModule,
+    ref_model: GraphModule,
+    target_model: GraphModule,
     analysis_input: torch.Tensor,
     dump_dir: str | Path,
 ) -> None:
@@ -348,7 +340,7 @@ def generate_analysis_report(
     images_dir = dump_dir / "images"
     images_dir.mkdir(exist_ok=True)
 
-    results = run_sensitivity_analysis(prepared_model, qdq_model, analysis_input)
+    results = run_sensitivity_analysis(ref_model, target_model, analysis_input)
 
     md_lines = []
     md_lines.append("# Quantization Sensitivity Report")

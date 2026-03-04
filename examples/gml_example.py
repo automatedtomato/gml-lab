@@ -105,7 +105,7 @@ def main() -> None:
     org_input = next(iter(test_loader))
     example_input = float_model.data_preprocessor(org_input, training=False)["inputs"]
     example_inputs = (example_input.to(device),)
-    example_inputs = tuple(i.to(device) for i in example_input)
+    example_inputs = tuple(i.to(device) for i in example_inputs)
 
     calib_size = args.batch_size if args.calib_size is None else args.calib_size
     total_calib_batches = math.ceil(calib_size / args.batch_size)
@@ -131,10 +131,13 @@ def main() -> None:
         gml_model.eval().to(device)
         analysis_input = example_input[:1].to(device)
         generate_analysis_report(
-            prepared_model, qdq_model, analysis_input, args.analysis_dir
+            prepared_model,
+            qdq_model,
+            analysis_input,
+            args.analysis_dir / "float_vs_qdq",
         )
         generate_analysis_report(
-            qdq_model, gml_model, analysis_input, args.analysis_dir
+            qdq_model, gml_model, analysis_input, args.analysis_dir / "qdq_vs_gml"
         )
         prepared_model.to(device)
         qdq_model.to(device)
