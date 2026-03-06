@@ -30,19 +30,11 @@ models = [
 INPUT_SHAPE = [224, 224]
 kernel_shapes = [
     (16, 32, 3, 3),
-    # (64, 128, 1, 1),
+    (64, 128, 1, 1),
 ]
 bias = [True, False]
-stride = [
-    [1, 1],
-    # [1, 2],
-    # [2, 1],
-    # [2, 2]
-]
-padding = [
-    [0, 0],
-    # [0, 1]
-]
+stride = [[1, 1], [1, 2], [2, 1], [2, 2]]
+padding = [[0, 0], [0, 1]]
 groups = [1]
 
 combi = itertools.product(stride, padding, groups)

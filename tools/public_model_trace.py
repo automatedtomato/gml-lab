@@ -43,12 +43,19 @@ def main() -> None:
 
     float_model = mmpretrain.get_model(model=args.arch, pretrained=True, device=device)
     wrapped_model = FxWrapper(float_model)
-    traced_model = torch.fx.symbolic_trace(wrapped_model)
-
-    dump_graph(traced_model, args.arch, args.graph_dump_dir)
-
+    traced = False
+    try:
+        traced_model = torch.fx.symbolic_trace(wrapped_model)
+        traced = True
+        dump_graph(traced_model, args.arch, args.graph_dump_dir)
+    except Exception as e:
+        print(f"Error tracing model: {e}. Print model structure instead.")
     with open(args.graph_dump_dir / "qdq.txt", "w") as f, contextlib.redirect_stdout(f):
-        traced_model.graph.print_tabular()
+        if traced:
+            traced_model.graph.print_tabular()
+        else:
+            print(wrapped_model)
+    print(f"Model graph is saved to {args.graph_dump_dir}")
 
 
 if __name__ == "__main__":
