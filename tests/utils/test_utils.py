@@ -115,7 +115,6 @@ def check_graph_structure(gm: GraphModule, expected_nodes: list[NodeInfo]) -> No
         )
         expected_node_info = expected_nodes_cp.pop(0)
         assert node_info == expected_node_info, (
-            "NodeInfos are defferent:"
             f"  target node: (op={node.op}, target= "
             f"{type(modules[node.target]) if node.op == 'call_module' else node.target})\n"  # noqa: E501
             f"  expected node: (op={expected_node_info.op}, target= )"
@@ -169,6 +168,8 @@ def run_quantizer_test(
     logger = get_logger("run_quantizer_test")
     float_model.eval()
     example_inputs = tuple(i.to(device) for i in example_inputs)
+    calib_inputs = tuple(i.to(device) for i in calib_inputs)
+
     calib_inputs = tuple(i.to(device) for i in calib_inputs)
 
     if out_dir is not None:

@@ -11,6 +11,15 @@ class LinearModule(nn.Module):
         return self.linear(x)
 
 
+class LinearIdentity(LinearModule):
+    def __init__(self, in_features: int, out_features: int, *, bias: bool) -> None:
+        super().__init__(in_features, out_features, bias=bias)
+        self.identity = nn.Identity()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.identity(super().forward(x))
+
+
 class LinearFunc(nn.Module):
     def __init__(self, in_features: int, out_features: int, *, bias: bool) -> None:
         super().__init__()

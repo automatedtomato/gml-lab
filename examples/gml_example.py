@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import math
 from pathlib import Path
 
@@ -49,7 +50,7 @@ def parse_args() -> argparse.Namespace:
         help="Specify batch size for evaluation. Default to 64.",
     )
     parser.add_argument(
-        "--calib-images",
+        "--calib-size",
         type=int,
         help=(
             "Sepcify the number of images to be used in calibaretion processs. "
@@ -57,7 +58,14 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--graph-dump-dir",
+        "-w",
+        "--warmup-rounds",
+        type=int,
+        default=3,
+        help=("Specify the number of warmup rounds for evaluation. Default to 3."),
+    )
+    parser.add_argument(
+        "--graph-out-dir",
         type=Path,
         help=(
             "Directory where visualized graph are saved in dot format. "
@@ -66,7 +74,7 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--lbl-dump-dir",
+        "--analysis-dir",
         type=Path,
         help=(
             "Directory where layer-by-layer sensitivity analysis reports are saved. "
@@ -83,7 +91,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0915
     """Run main example path."""
     seed = set_seed()
     args = parse_args()
@@ -100,15 +108,15 @@ def main() -> None:
 
     test_loader, calib_loader = prepare_dataloader(cfg)
 
-    print(f"[DATASET] data={args.data}, size={len(test_loader.dataset)}")
+    print(f"[DATASET] data={args.data}, size={len(test_loader.dataset)}")  # type: ignore
 
     org_input = next(iter(test_loader))
-    example_input = float_model.data_preprocessor(org_input, training=False)["inputs"]
-    example_inputs = (example_input.to(device),)
+    example_input = data_preprocessor(org_input, training=False)["inputs"]
+    example_inputs = (example_input,)
     example_inputs = tuple(i.to(device) for i in example_input)
 
-    calib_images = args.batch_size if args.calib_images is None else args.calib_images
-    total_calib_batches = math.ceil(calib_images / args.batch_size)
+    calib_size = args.batch_size if args.calib_size is None else args.calib_size
+    total_calib_batches = math.ceil(calib_size / args.batch_size)
 
     prepared_model, qdq_model = quantize(
         float_model,
@@ -120,25 +128,24 @@ def main() -> None:
 
     gml_model = lower_to_gml(qdq_model)
 
-    if args.graph_dump_dir is not None:
-        dump_graph(prepared_model, args.arch + "_prepared", args.graph_dump_dir)
-        dump_graph(qdq_model, args.arch + "_qdq", args.graph_dump_dir)
-        dump_graph(gml_model, args.arch + "_cuda", args.graph_dump_dir)
+    if args.graph_out_dir is not None:
+        dump_graph(prepared_model, args.arch + "_prepared", args.graph_out_dir)
+        dump_graph(qdq_model, args.arch + "_qdq", args.graph_out_dir)
+        dump_graph(gml_model, args.arch + "_cuda", args.graph_out_dir)
 
-    if args.lbl_dump_dir is not None:
-        prepared_model.eval()
-        qdq_model.eval()
-        gml_model.eval()
+    if args.analysis_dir is not None:
+        prepared_model.eval().to(device)
+        qdq_model.eval().to(device)
+        gml_model.eval().to(device)
         analysis_input = example_input[:1].to(device)
-        # prepared_model.eval().to("cpu")
-        # qdq_model.eval().to("cpu")
-        # gml_model.eval().to("cpu")
-        # analysis_input = example_input[:1].to("cpu")
         generate_analysis_report(
-            prepared_model, qdq_model, analysis_input, args.lbl_dump_dir
+            prepared_model,
+            qdq_model,
+            analysis_input,
+            args.analysis_dir / "float_vs_qdq",
         )
         generate_analysis_report(
-            qdq_model, gml_model, analysis_input, args.lbl_dump_dir
+            qdq_model, gml_model, analysis_input, args.analysis_dir / "qdq_vs_gml"
         )
         prepared_model.to(device)
         qdq_model.to(device)
@@ -154,12 +161,54 @@ def main() -> None:
         perf_profile(qdq_model, example_inputs, save_dir / "qdq_prof.json")
         perf_profile(gml_model, example_inputs, save_dir / "cuda_prof.json")
 
+    met = []
     if "float" in args.eval_options:
-        _ = evaluate(cfg, args.arch, float_model, "float", test_loader, seed)
+        met_float = evaluate(
+            cfg,
+            args.arch,
+            args.warmup_rounds,
+            float_model,
+            "float",
+            test_loader,
+            data_preprocessor,
+            device,
+            seed,
+        )
+        met.append(met_float)
     if "qdq" in args.eval_options:
-        _ = evaluate(cfg, args.arch, qdq_model, "qdq", test_loader, seed)
+        met_qdq = evaluate(
+            cfg,
+            args.arch,
+            args.warmup_rounds,
+            qdq_model,
+            "qdq",
+            test_loader,
+            data_preprocessor,
+            device,
+            seed,
+        )
+        met.append(met_qdq)
     if "cuda" in args.eval_options:
-        _ = evaluate(cfg, args.arch, gml_model, "cuda", test_loader, seed)
+        met_cuda = evaluate(
+            cfg,
+            args.arch,
+            args.warmup_rounds,
+            gml_model,
+            "cuda",
+            test_loader,
+            data_preprocessor,
+            device,
+            seed,
+        )
+        met.append(met_cuda)
+
+    if met:
+        with open(f"examples/results/{args.arch}_benchmark.csv", "w") as f:
+            writer = csv.DictWriter(f, list(met[0]))
+            writer.writeheader()
+            writer.writerow(met_float)
+            writer.writerow(met_qdq)
+            writer.writerow(met_cuda)
 
 
 if __name__ == "__main__":

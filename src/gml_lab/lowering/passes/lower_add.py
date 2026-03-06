@@ -60,6 +60,7 @@ def lower_add(gm: GraphModule) -> None:
             new_node = graph.call_module(
                 new_name, args=(dq_a.args[0], dq_b.args[0]), kwargs={}
             )
+            new_node.meta["source_module"] = target_node.target
             node.replace_all_uses_with(new_node)
             new_node.name = new_name
         remove_unused_nodes(graph, [node, target_node, dq_a, dq_b])

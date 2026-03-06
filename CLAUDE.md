@@ -14,9 +14,6 @@ Never modify source files. If you want to suggest changes, write them as review 
 - Docker / devcontainer
 - Dependencies: `docker/install/requirements.txt`
 
-## Review Output Format
-Save review results to `internal/docs/review/YYYY-MM-DD_<filename>.md` with the following sections:
-
 ### Summary
 ### Issues (Critical / Warning / Suggestion)
 ### CUDA-specific concerns

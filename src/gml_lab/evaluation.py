@@ -1,4 +1,6 @@
 import time
+from collections import OrderedDict
+from datetime import datetime
 
 import mmengine
 import torch
@@ -8,12 +10,15 @@ from torch.utils.data import DataLoader
 from .modeling import build_mm_model
 
 
-def evaluate(
+def evaluate(  # noqa: PLR0913
     cfg: mmengine.config.Config,
     model_arch: str,
+    warmup_rounds: int,
     target_model: torch.nn.Module | torch.fx.GraphModule,
     target_type: str,
     test_loader: DataLoader,
+    data_preprocessor: torch.nn.Module,
+    device: str,
     seed: int,
 ) -> dict[str, float]:
     """Get metrics from the target_model."""
@@ -36,12 +41,22 @@ def evaluate(
         output_dir=f"work_dirs/{model_arch}",
     )
 
+    data_preprocessor = data_preprocessor.to(device)
+    org_input = next(iter(test_loader))
+    warmup_input = data_preprocessor(org_input, training=False)["inputs"]
+    warmup_input = warmup_input.to(device)
+    with torch.no_grad():
+        for _ in range(warmup_rounds):
+            _ = target_model(warmup_input)
+
+    torch.cuda.synchronize()
     tracker.start_task(f"{target_type}")
     start_time = time.time()
 
     try:
         metrics = runner.test()
     finally:
+        torch.cuda.synchronize()
         end_time = time.time()
         em = tracker.stop_task(f"{target_type}")
         tracker.stop()
@@ -56,7 +71,10 @@ def evaluate(
         f"emissions={carbon_em:4f} g, total_power={total_power:4f} Wh, "
         f"avg_power={avg_power:2f} W"
     )
-    metrics.update(
+    metrics = {k: v for k, v in metrics.items() if k not in ["date_time", "time"]}
+    ret = {"time": datetime.now(), "type": target_type, "warmup rounds": warmup_rounds}
+    ret.update(metrics)
+    ret.update(
         {
             "duration": dur,
             "carbon_emission_g": carbon_em,
@@ -64,4 +82,4 @@ def evaluate(
             "avg_power_w": avg_power,
         }
     )
-    return metrics
+    return OrderedDict(ret)

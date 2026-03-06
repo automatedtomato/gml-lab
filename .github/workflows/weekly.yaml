@@ -1,25 +1,23 @@
-name: Weekly Heavy Tests
+name: Weekly Tests
 
 on:
   schedule:
     - cron: '0 0 * * 0'
-    workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
-  heavy-tests:
-    name: Full Suite
+  cpu-tests:
+    name: CPU Tests
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.10"
-
       - name: Install dependencies
-        uses: |
+        run: |
           uv venv --allow-existing
           uv pip install openmim
           sed '/torch/d' docker/install/requirements.txt > requirements_ci.txt
@@ -27,6 +25,33 @@ jobs:
           uv pip install torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cpu
           uv run mim install "mmcv==2.1.0"
           uv pip install --no-deps -e
-
-      - name: Run All tests
+      - name: Run CPU tests
         run: uv run pytest
+
+  gpu-tests:
+    name: GPU Kernel Tests
+    runs-on: [self-hosted, gpu]
+
+    steps:
+      - name: Clean workspace
+        run: rm -rf $GITHUB_WORKSPACE/*
+
+      - uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies (CUDA)
+        run: |
+          uv venv --allow-existing
+          uv pip install openmim
+          sed '/torch/d' docker/install/requirements.txt > requirements_ci.txt
+          uv pip install -r requirements_ci.txt
+          uv pip install torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cu118
+          uv run mim install "mmcv==2.1.0"
+          uv pip install --no-deps -e
+
+      - name: Run Kernel tests
+        run: uv run pytest tests/kernel/

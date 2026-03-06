@@ -9,7 +9,10 @@ from torch.ao.quantization.quantize_fx import prepare_fx
 from src.gml_lab.quantizer.gml_backend_config import get_prepare_custom_config
 from src.gml_lab.quantizer.passes import (
     fuse_add_relu,
+    remove_identity,
+    skip_quant_non_aligned_modules,
     unify_add,
+    unify_conv,
     unify_linear,
     unify_relu,
 )
@@ -49,11 +52,16 @@ def gml_prepare_fx(
     model = copy.deepcopy(model)
     gm = torch.fx.symbolic_trace(model)
 
+    remove_identity(gm)
+
     unify_add(gm)
     unify_relu(gm)
     unify_linear(gm)
+    unify_conv(gm)
 
     fused_model = _gml_fuse_fx(gm)
+
+    qconfig_mapping = skip_quant_non_aligned_modules(gm, qconfig_mapping)
 
     fused_model.eval()
     prepare_custom_config = get_prepare_custom_config()
