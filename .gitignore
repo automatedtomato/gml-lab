@@ -1,5 +1,13 @@
 # Internal documenations
 internal/
+docs/review/
+docs/tasks/
+
+
+# Backups
+*.backup
+*.bak
+
 
 # Configs
 configs/*.yaml
@@ -28,6 +36,7 @@ examples/results/*
 results/*
 tests/*/results/*
 tmp/*
+.logs/
 
 
 # Datasets and Experiments

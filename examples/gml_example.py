@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import math
 from pathlib import Path
 
@@ -57,6 +58,13 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "-w",
+        "--warmup-rounds",
+        type=int,
+        default=3,
+        help=("Specify the number of warmup rounds for evaluation. Default to 3."),
+    )
+    parser.add_argument(
         "--graph-out-dir",
         type=Path,
         help=(
@@ -83,7 +91,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0915
     """Run main example path."""
     seed = set_seed()
     args = parse_args()
@@ -100,12 +108,12 @@ def main() -> None:
 
     test_loader, calib_loader = prepare_dataloader(cfg)
 
-    print(f"[DATASET] data={args.data}, size={len(test_loader.dataset)}")
+    print(f"[DATASET] data={args.data}, size={len(test_loader.dataset)}")  # type: ignore
 
     org_input = next(iter(test_loader))
-    example_input = float_model.data_preprocessor(org_input, training=False)["inputs"]
-    example_inputs = (example_input.to(device),)
-    example_inputs = tuple(i.to(device) for i in example_inputs)
+    example_input = data_preprocessor(org_input, training=False)["inputs"]
+    example_inputs = (example_input,)
+    example_inputs = tuple(i.to(device) for i in example_input)
 
     calib_size = args.batch_size if args.calib_size is None else args.calib_size
     total_calib_batches = math.ceil(calib_size / args.batch_size)
@@ -153,12 +161,54 @@ def main() -> None:
         perf_profile(qdq_model, example_inputs, save_dir / "qdq_prof.json")
         perf_profile(gml_model, example_inputs, save_dir / "cuda_prof.json")
 
+    met = []
     if "float" in args.eval_options:
-        _ = evaluate(cfg, args.arch, float_model, "float", test_loader, seed)
+        met_float = evaluate(
+            cfg,
+            args.arch,
+            args.warmup_rounds,
+            float_model,
+            "float",
+            test_loader,
+            data_preprocessor,
+            device,
+            seed,
+        )
+        met.append(met_float)
     if "qdq" in args.eval_options:
-        _ = evaluate(cfg, args.arch, qdq_model, "qdq", test_loader, seed)
+        met_qdq = evaluate(
+            cfg,
+            args.arch,
+            args.warmup_rounds,
+            qdq_model,
+            "qdq",
+            test_loader,
+            data_preprocessor,
+            device,
+            seed,
+        )
+        met.append(met_qdq)
     if "cuda" in args.eval_options:
-        _ = evaluate(cfg, args.arch, gml_model, "cuda", test_loader, seed)
+        met_cuda = evaluate(
+            cfg,
+            args.arch,
+            args.warmup_rounds,
+            gml_model,
+            "cuda",
+            test_loader,
+            data_preprocessor,
+            device,
+            seed,
+        )
+        met.append(met_cuda)
+
+    if met:
+        with open(f"examples/results/{args.arch}_benchmark.csv", "w") as f:
+            writer = csv.DictWriter(f, list(met[0]))
+            writer.writeheader()
+            writer.writerow(met_float)
+            writer.writerow(met_qdq)
+            writer.writerow(met_cuda)
 
 
 if __name__ == "__main__":

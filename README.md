@@ -5,13 +5,15 @@ Unlike a black-box conversion tool, this project serves as a workbench for bridg
 
 The primary goal is to establish a feedback loop of **"Measure (Profile) -> Analyze (SNR/Sensitivity) -> Optimize (Quantize/Kernel)"** to achieve Green AI principles.
 
+> **NOW supporting ResNet18!!**
+
 ## Key Features
 
 * **FX Graph Quantization**: Transparent PTQ pipeline using `torch.fx` with graph visualization.
 * **Micro-Benchmarking**: Custom profiler for tracking layer-wise latency (CPU/GPU) to identify real bottlenecks.
+* **Custom CUDA Kernels**: Fused kernels for Add(+ReLU), unit ReLU, Conv2d(+ReLU), Linear for faster and lighter inference.
 * **Sensitivity Analysis**: Statistical analysis (SNR, Cosine Similarity) to visualize quantization damage per layer.
 * **High-Throughput I/O**: Optimized data loading via LMDB to prevent GPU starvation during profiling.
-* **Automated AI Code Review**: Integrated Anthropic Claude API via GitHub Actions for automated, high-quality code reviews on every Pull Request.
 
 ## Roadmap (Experiments in Queue)
 
@@ -19,7 +21,7 @@ This lab is currently in **Sprint 2** phase. The following features are under ac
 
 * [x] **Baseline Measurement**: FP32 vs. INT8 accuracy & latency profiling.
 * [x] **Custom CUDA Kernels**: Implementing fused kernels for identified bottlenecks (e.g., INT8 Element-wise Add & ReLU).
-* [ ] **Compute-Bound Kernels**: Implementing CUTLASS-based Implicit GEMM kernels for INT8 Conv2d and Linear layers.
+* [x] **Compute-Bound Kernels**: Implementing CUTLASS-based Implicit GEMM kernels for INT8 Conv2d and Linear layers.
 * [ ] **Mixed Precision**: Surgical FP16 fallback for sensitive layers (AutoMP).
 * [ ] **Transformer Support**: Graph tracing patches for ViT/Swin Transformers.
 
@@ -129,18 +131,10 @@ python -m examples.gml_example \
 
 ```
 
-## Directory Structure
-
-```text
-gml-lab/
-├── configs/            # MMPretrain & Data configurations
-├── csrc/               # Custom CUDA kernels (C++/CUDA) Source
-├── examples/           # Experiment runners
-├── src/
-│   └── gml_lab/
-│       ├── modeling/   # Model loading & FX patching logic
-│       ├── quantizer/  # FX Graph Quantization pipeline
-│       └── ...
-├── tests/              # Unit tests
-└── tools/              # Profiler & Analysis tools
-```
+## Upcoming Features
+* ConvNeXt Support
+  * CUDA kernels for LayerNorm, GELU, and so on...
+* MobileNest Support
+  * CUDA kernels for MatMul, Swish, etc.
+* Faster inference with CUDAGraph
+* Mixed precision (Bfloat16)
