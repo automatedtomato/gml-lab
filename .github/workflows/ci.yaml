@@ -1,4 +1,4 @@
-name: Linter & Fast Tests on PR
+name: PR Check
 
 on:
   pull_request:
