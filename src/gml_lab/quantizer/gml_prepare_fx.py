@@ -13,6 +13,7 @@ from src.gml_lab.quantizer.passes import (
     skip_quant_non_aligned_modules,
     unify_add,
     unify_conv,
+    unify_gelu,
     unify_linear,
     unify_relu,
 )
@@ -57,6 +58,7 @@ def gml_prepare_fx(
     unify_add(gm)
     unify_relu(gm)
     unify_linear(gm)
+    unify_gelu(gm)
     unify_conv(gm)
 
     fused_model = _gml_fuse_fx(gm)

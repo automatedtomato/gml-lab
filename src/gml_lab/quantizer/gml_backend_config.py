@@ -39,6 +39,7 @@ def _get_default_configs() -> list[BackendPatternConfig]:
         cnn.Add,
         fcnn.AddReLU,
         nni.ConvReLU2d,
+        nn.GELU,
     ]
     default_configs: list[BackendPatternConfig] = []
     for op in default_ops:
