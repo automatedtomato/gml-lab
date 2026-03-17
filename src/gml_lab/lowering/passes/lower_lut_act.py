@@ -46,10 +46,10 @@ def lower_lut_act(gm: GraphModule) -> None:
         out_qparams = extract_qparams(gm, dq_node.args[0])
 
         kwargs = {
-            "input_scale": in_qparams["scale"],
-            "input_zp": in_qparams["zero_point"],
-            "output_scale": out_qparams["scale"],
-            "output_zp": out_qparams["zero_point"],
+            "input_scale": in_qparams["output_scale"],
+            "input_zp": in_qparams["output_zp"],
+            "output_scale": out_qparams["output_scale"],
+            "output_zp": out_qparams["output_zp"],
         }
         new_module = GMLQuantLUT(**kwargs, lut=lut)
         new_name = graph._graph_namespace.create_name(f"gml_q_lut_{cnt}", None)

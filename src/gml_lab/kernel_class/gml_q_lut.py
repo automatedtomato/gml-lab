@@ -37,7 +37,6 @@ class GMLQuantLUT(GMLQuantUnaryOpsBase):
         super().__init__(output_scale, output_zp)
         self.input_scale = input_scale
         self.input_zp = input_zp
-        self.lut = lut
 
         lut_tensor = LUTAct.generate(
             lut=lut,
@@ -51,17 +50,11 @@ class GMLQuantLUT(GMLQuantUnaryOpsBase):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         zp = self.output_zp.item()
         scale = self.output_scale.item()
-        if custom_ops is None:
-            x = x.dequantize()
-            out = torch.nn.functional.relu(x)
-            return torch.quantize_per_tensor(
-                out,
-                scale=scale,
-                zero_point=zp,
-                dtype=torch.qint8,
-            )
+        x = x.int_repr().to(torch.long).to("cpu")
+        out = self.lut[x + 128]
+        return torch._make_per_tensor_quantized_tensor(
+            out,
+            scale=scale,
+            zero_point=zp,
+        )
 
-        x = x.int_repr()
-        out = custom_ops.quant_relu(x, zp)
-
-        return torch._make_per_tensor_quantized_tensor(out, scale=scale, zero_point=zp)
