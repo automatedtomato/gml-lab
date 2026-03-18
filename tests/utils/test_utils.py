@@ -154,7 +154,7 @@ def quantize_model(
     return prepared_model.eval(), qdq_model.eval()
 
 
-def run_quantizer_test(
+def run_quantizer_test(  # noqa: C901
     float_model: Module,
     example_inputs: tuple[torch.Tensor, ...],
     calib_inputs: tuple[torch.Tensor, ...],
@@ -166,6 +166,8 @@ def run_quantizer_test(
 ) -> float | None:
     """Run quantizer test suite."""
     logger = get_logger("run_quantizer_test")
+    if test_mode == "lower_acc" and (not torch.cuda.is_available() or device == "cpu"):
+        logger.warning("Kernel test runs on CPU. CUDA kernel is not enabled.")
     float_model.eval()
     example_inputs = tuple(i.to(device) for i in example_inputs)
     calib_inputs = tuple(i.to(device) for i in calib_inputs)

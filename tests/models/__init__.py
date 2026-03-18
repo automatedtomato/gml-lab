@@ -1,3 +1,4 @@
+from .activation import GELUFunc, ReLUFunc1, ReLUFunc2, ReLUMethod, ReLUModule
 from .add import AddFunc, AddMethod, AddOp, AddReLU, IncrementalAdd
 from .conv import (
     ConvBN,
@@ -10,7 +11,6 @@ from .conv import (
     ConvReLUMod,
 )
 from .linear import LinearBN, LinearFunc, LinearIdentity, LinearModule
-from .relu import ReLUFunc1, ReLUFunc2, ReLUMethod, ReLUModule
 
 __all__ = [
     "AddFunc",
@@ -31,6 +31,7 @@ __all__ = [
     "ConvReLUFunc",
     "ConvReLUMod",
     "ConvReLUMod",
+    "GELUFunc",
     "IncrementalAdd",
     "LinearBN",
     "LinearFunc",

@@ -32,3 +32,5 @@ fused_quant_conv(const torch::Tensor &input, const torch::Tensor &weight,
                  torch::IntArrayRef padding, torch::IntArrayRef dilation, int64_t group,
                  const torch::Tensor &scales, int32_t output_zp, bool fuse_relu,
                  bool is_per_channel);
+extern torch::Tensor quant_lut(const torch::Tensor &input, const torch::Tensor &lut);
+
