@@ -45,12 +45,13 @@ torch::Tensor quant_lut(const torch::Tensor& input, const torch::Tensor& lut) {
   auto input_c = input.contiguous();
   auto output = torch::empty_like(input_c);
   auto size = input_c.numel();
+  auto lut_c = lut.contiguous();
 
   int blocks = get_blocks(size);
 
   kernel_quant_lut<<<blocks, kDefaultThreads>>>(
       input_c.data_ptr<int8_t>(),
-      lut.data_ptr<int8_t>(),
+      lut_c.data_ptr<int8_t>(),
       output.data_ptr<int8_t>(),
       size 
   );

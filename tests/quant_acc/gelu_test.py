@@ -26,7 +26,7 @@ input_shapes = [
 
 @pytest.mark.parametrize("seed", seeds)
 @pytest.mark.parametrize("input_shape", input_shapes)
-def test_relu(
+def test_gelu(
     seed: int,
     input_shape: list[int],
     request: pytest.FixtureRequest,

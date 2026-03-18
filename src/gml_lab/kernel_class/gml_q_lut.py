@@ -52,10 +52,11 @@ class GMLQuantLUT(GMLQuantUnaryOpsBase):
         scale = self.output_scale.item()
         x = x.int_repr()
         if custom_ops is None:
-            x = x.to(torch.long).to("cpu")
-            out = self.lut[x + 128]
+            x = x.to(torch.long)
+            lut = self.lut.to(x.device)
+            out = lut[x + 128]
         else:
-            lut = self.lut.to("cuda")
+            lut = self.lut.to(x.device)
             out = custom_ops.quant_lut(x, lut)
         return torch._make_per_tensor_quantized_tensor(
             out,

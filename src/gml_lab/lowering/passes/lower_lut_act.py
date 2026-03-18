@@ -42,8 +42,8 @@ def lower_lut_act(gm: GraphModule) -> None:
         if not is_dequant_node(dq_node):
             continue
 
-        in_qparams = extract_qparams(gm, node)
-        out_qparams = extract_qparams(gm, dq_node.args[0])
+        out_qparams = extract_qparams(gm, node)
+        in_qparams = extract_qparams(gm, dq_node.args[0])
 
         kwargs = {
             "input_scale": in_qparams["output_scale"],

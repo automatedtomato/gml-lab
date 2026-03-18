@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 def unify_gelu(gm: GraphModule) -> None:
-    """Find ReLU finction/method and unify to nn.ReLU."""
+    """Find GELU finction/method and unify to nn.ReLU."""
     logger = get_logger("unify_pass")
     graph = gm.graph
     cnt = 0
@@ -36,7 +36,7 @@ def unify_gelu(gm: GraphModule) -> None:
                 new_node.name = new_name
             graph.erase_node(node)
             logger.info(
-                f' The function/method "{node.name}" is replaced with '
+                f' The function "{node.name}" is replaced with '
                 f'the new module "{new_node.name}"'
             )
             cnt += 1
