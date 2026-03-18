@@ -13,9 +13,7 @@ seeds = [int(os.getenv("SET_SEED", time.time_ns()))]
 
 
 @pytest.mark.parametrize("seed", seeds)
-def test_unify_gelu(
-    seed: int, request: pytest.FixtureRequest
-) -> None:
+def test_unify_gelu(seed: int, request: pytest.FixtureRequest) -> None:
     device = "cpu"
     torch.manual_seed(seed)
     out_dir = get_test_output_dir(request.node.name, __file__)

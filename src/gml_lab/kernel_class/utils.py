@@ -17,7 +17,7 @@ class LUTAct:
         out_zp: int,
     ) -> torch.Tensor:
         """Generate LUT for specified activation function."""
-        quant_input = torch.arange(-128 ,128, dtype=torch.float32)
+        quant_input = torch.arange(-128, 128, dtype=torch.float32)
         float_input = (quant_input - in_zp) * in_scale
         if lut == "gelu":
             float_out = cls._calc_gelu(float_input)

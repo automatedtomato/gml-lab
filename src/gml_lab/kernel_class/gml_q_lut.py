@@ -62,4 +62,3 @@ class GMLQuantLUT(GMLQuantUnaryOpsBase):
             scale=scale,
             zero_point=zp,
         )
-
